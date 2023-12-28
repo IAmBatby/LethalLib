@@ -9,7 +9,8 @@ Currently includes:
 - Dungeon API
 - Custom Enemy API  
 - Network Prefab API  
+- Weather API  
 
 # Recent Changes 
   
-- Fixed issue with custom monster logs showing up multiple times.
+- Added weather api, mostly untested.

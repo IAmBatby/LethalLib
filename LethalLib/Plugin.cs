@@ -21,7 +21,7 @@ namespace LethalLib
     public class Plugin : BaseUnityPlugin {
         public const string ModGUID = "evaisa.lethallib";
         public const string ModName = "LethalLib";
-        public const string ModVersion = "0.6.3";
+        public const string ModVersion = "0.8.0";
 
         public static AssetBundle MainAssets;
 
@@ -34,13 +34,14 @@ namespace LethalLib
             Logger.LogInfo($"LethalLib loaded!!");
 
             new ILHook(typeof(StackTrace).GetMethod("AddFrames", BindingFlags.Instance | BindingFlags.NonPublic), IlHook);
-
             Enemies.Init();
             Items.Init();
             Unlockables.Init();
             MapObjects.Init();  
             Dungeon.Init();
+            Weathers.Init();
             LethalLib.Modules.NetworkPrefabs.Init();
+           
         }
 
 
