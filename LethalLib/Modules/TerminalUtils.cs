@@ -37,27 +37,43 @@ namespace LethalLib.Modules
         }
 
         //Terminal commands for custom moon stuff
+        private static Terminal _terminal;
+        public static Terminal Terminal
+        {
+            get
+            {
+                if (_terminal != null)
+                    return (_terminal);
+                else
+                {
+                    _terminal = GameObject.Find("TerminalScript").GetComponent<Terminal>();
+                    if (_terminal != null)
+                        return (_terminal);
+                    else
+                    {
+                        Debug.LogError("LethaLib: Failed To Grab Terminal Reference!");
+                        return (null);
+                    }
+                }
 
-        private static bool PatchTerminal = true;
-        public static Terminal ActiveTerminal;
-        static TerminalKeyword RouteKeyword;
-        static TerminalKeyword InfoKeyword;
-
-        private static void GrabTerminal(){
-            ActiveTerminal = GameObject.Find("TerminalScript").GetComponent<Terminal>(); //Terminal object reference 
-            RouteKeyword = ActiveTerminal.terminalNodes.allKeywords[26];
-            InfoKeyword = ActiveTerminal.terminalNodes.allKeywords[6];
+            }
         }
+
+        public static TerminalKeyword RouteKeyword => Terminal.terminalNodes.allKeywords[26];
+        public static TerminalKeyword InfoKeyword => Terminal.terminalNodes.allKeywords[6];
+
+        private static bool isTerminalPatched = true;
+
         [HarmonyPatch(typeof(StartOfRound), "Awake")]
         [HarmonyPostfix]
         public static void AddMoonTerminalKeyword(TerminalKeyword MoonEntryName, SelectableLevel Level) { 
             TerminalKeyword TerminalEntry = MoonEntryName; //get our bundle's Terminal Keyword 
             TerminalEntry.defaultVerb = RouteKeyword;
-            Array.Resize<SelectableLevel>(ref ActiveTerminal.moonsCatalogueList, ActiveTerminal.moonsCatalogueList.Length + 1); //Resize list of moons for catalogue
-            ActiveTerminal.moonsCatalogueList[ActiveTerminal.moonsCatalogueList.Length -1 ] = Level; //Add our moon to that list
+            Array.Resize<SelectableLevel>(ref Terminal.moonsCatalogueList, Terminal.moonsCatalogueList.Length + 1); //Resize list of moons for catalogue
+            Terminal.moonsCatalogueList[Terminal.moonsCatalogueList.Length -1 ] = Level; //Add our moon to that list
                 
-            Array.Resize<TerminalKeyword>(ref ActiveTerminal.terminalNodes.allKeywords, ActiveTerminal.terminalNodes.allKeywords.Length + 1);
-            ActiveTerminal.terminalNodes.allKeywords[ActiveTerminal.terminalNodes.allKeywords.Length - 1] = TerminalEntry; //Add our terminal entry 
+            Array.Resize<TerminalKeyword>(ref Terminal.terminalNodes.allKeywords, Terminal.terminalNodes.allKeywords.Length + 1);
+            Terminal.terminalNodes.allKeywords[Terminal.terminalNodes.allKeywords.Length - 1] = TerminalEntry; //Add our terminal entry 
             TerminalEntry.defaultVerb = RouteKeyword; //Set its default verb to "route"
 
 
@@ -66,7 +82,7 @@ namespace LethalLib.Modules
         [HarmonyPatch(typeof(StartOfRound), "Awake")]
         [HarmonyPostfix]
         public static void AddRouteNode(TerminalKeyword MoonEntryName, TerminalNode RouteNode) {
-            RouteNode.terminalOptions[0].noun = ActiveTerminal.terminalNodes.allKeywords[4];
+            RouteNode.terminalOptions[0].noun = Terminal.terminalNodes.allKeywords[4];
             RouteNode.terminalOptions[0].result = new TerminalNode {
                 displayText = "You have cancelled the order.",
                 maxCharactersToType = 25,
@@ -78,7 +94,7 @@ namespace LethalLib.Modules
                 storyLogFileID = -1,
                 playSyncedClip = -1
             };
-            RouteNode.terminalOptions[1].noun = ActiveTerminal.terminalNodes.allKeywords[3];
+            RouteNode.terminalOptions[1].noun = Terminal.terminalNodes.allKeywords[3];
 
             //Resize our RouteKeyword array and put our new route confirmation into it
             Array.Resize<CompatibleNoun>(ref RouteKeyword.compatibleNouns, RouteKeyword.compatibleNouns.Length + 1);
@@ -99,13 +115,12 @@ namespace LethalLib.Modules
         }
 
         public static void AddMoonsToCatalogue() {
-            if (!PatchTerminal) {
+            if (isTerminalPatched == true) {
                 return;
             }
 
             Dictionary<string, CustomLevel> moons = CustomLevelList;
-            Terminal ActiveTerminal = GameObject.Find("TerminalScript").GetComponent<Terminal>();
-            TerminalNode specialKeywordResult = ActiveTerminal.terminalNodes.allKeywords[21].specialKeywordResult;
+            TerminalNode specialKeywordResult = Terminal.terminalNodes.allKeywords[21].specialKeywordResult;
             specialKeywordResult.displayText.Substring(specialKeywordResult.displayText.Length - 3);
 
             foreach (string MoonName in CustomLevelList.Keys) {
@@ -115,7 +130,7 @@ namespace LethalLib.Modules
 
             TerminalNode terminalNode2 = specialKeywordResult;
             terminalNode2.displayText += "\n\n";
-            PatchTerminal = false;
+            isTerminalPatched = true;
             return;
         }
     }

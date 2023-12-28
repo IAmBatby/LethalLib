@@ -18,7 +18,7 @@
         <HintPath>C:\Program Files (x86)\Steam\steamapps\common\Lethal Company\BepInEx\core\0Harmony.dll</HintPath>
       </Reference>
       <Reference Include="Assembly-CSharp">
-        <HintPath>C:\Program Files (x86)\Steam\steamapps\common\Lethal Company\Modding\Deps\Assembly-CSharp-nstrip.dll</HintPath>
+        <HintPath>C:\Program Files (x86)\Steam\steamapps\common\Lethal Company\Lethal Company_Data\Managed\Assembly-CSharp.dll</HintPath>
       </Reference>
       <Reference Include="Assembly-CSharp-firstpass">
         <HintPath>C:\Program Files (x86)\Steam\steamapps\common\Lethal Company\Lethal Company_Data\Managed\Assembly-CSharp-firstpass.dll</HintPath>
@@ -48,13 +48,13 @@
         <HintPath>C:\Program Files (x86)\Steam\steamapps\common\Lethal Company\Lethal Company_Data\Managed\Unity.Animation.Rigging.dll</HintPath>
       </Reference>
       <Reference Include="Unity.Netcode.Components">
-        <HintPath>..\..\..\NetcodePatcher\deps\Unity.Netcode.Components.dll</HintPath>
+        <HintPath>C:\Program Files (x86)\Steam\steamapps\common\Lethal Company\Lethal Company_Data\Managed\Unity.Netcode.Components.dll</HintPath>
       </Reference>
       <Reference Include="Unity.Netcode.Runtime">
-        <HintPath>..\..\..\NetcodePatcher\Unity.Netcode.Runtime.dll</HintPath>
+        <HintPath>C:\Program Files (x86)\Steam\steamapps\common\Lethal Company\Lethal Company_Data\Managed\Unity.Netcode.Runtime.dll</HintPath>
       </Reference>
       <Reference Include="Unity.Networking.Transport">
-        <HintPath>..\..\..\NetcodePatcher\deps\Unity.Networking.Transport.dll</HintPath>
+        <HintPath>C:\Program Files (x86)\Steam\steamapps\common\Lethal Company\Lethal Company_Data\Managed\Unity.Networking.Transport.dll</HintPath>
       </Reference>
       <Reference Include="UnityEngine">
         <HintPath>C:\Program Files (x86)\Steam\steamapps\common\Lethal Company\Lethal Company_Data\Managed\UnityEngine.dll</HintPath>

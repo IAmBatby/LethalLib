@@ -24,128 +24,123 @@ namespace LethalLib.Modules
          * If I need to move it to a seperate class let me know -Skull
          */
 
-        public static Dictionary<string, CustomLevel> CustomLevelList;
+        //public static Dictionary<string, CustomLevel> CustomLevelList;
+        //public static Dictionary<int, CustomLevel> customLevelsDict;
 
-        public class CustomLevel {
-            public TerminalKeyword LevelKeyword;
-            public TerminalNode TerminalRoute;
-            public SelectableLevel NewLevel;
-            public TerminalNode LevelTerminalInfo;         
-            public GameObject LevelPrefab;
-            public static int MoonID = 9;
-            public string MoonFriendlyName;
+        private static List<CustomLevel> _customLevelList; //Needs talk about renaming
 
-            private static List<string> ObjectsToDestroy = new List<string> {
-                "CompletedVowTerrain",
-                "tree",
-                "Tree",
-                "Rock",
-                "StaticLightingSky",
-                "ForestAmbience",
-                "Local Volumetric Fog",
-                "GroundFog",
-                "Sky and Fog Global Volume",
-                "SunTexture"
-            };
+        public static List<SelectableLevel> allLevelsList;
+        public static List<SelectableLevel> vanillaLevelsList;
+        public static List<SelectableLevel> customLevelsList;
 
-            public static void AddObjectToDestroyList(string NewObjectName) {
-                ObjectsToDestroy.Add(NewObjectName);
-            }
-            public static void ClearObjectToDestroyList() {
-                ObjectsToDestroy.Clear();
-            }
-
-            public List<string> GetDestroyList() { return ObjectsToDestroy; }
-
-            public CustomLevel(SelectableLevel newSelectableLevel, TerminalKeyword newTerminalAsset,
-                    TerminalNode NewRoute, TerminalNode newTerminalInfo, GameObject newLevelPrefab) {
-                MoonID = MoonID++;
-                NewLevel = newSelectableLevel;
-                NewLevel.levelID = MoonID;
-                LevelKeyword = newTerminalAsset;
-                TerminalRoute = NewRoute;
-                NewRoute.buyRerouteToMoon = MoonID;
-                NewRoute.terminalOptions[1].result.buyRerouteToMoon = MoonID;
-                LevelTerminalInfo = newTerminalInfo;
-                LevelPrefab = newLevelPrefab;
-                MoonFriendlyName = NewLevel.PlanetName;
-
-                CustomLevelList.AddItem(new KeyValuePair<string, CustomLevel>(MoonFriendlyName, this));
-                
-            }
-        }
         [HarmonyPatch(typeof(StartOfRound), "Awake")]
         [HarmonyPrefix]
         [HarmonyPriority(0)]
-        public static void AddMoonsToMoonList(StartOfRound __instance) {
-            
-            //Resize the levels array to include all of our new ones
-            SelectableLevel[] newLevelArray = new SelectableLevel[__instance.levels.Length + CustomLevelList.Count];
-            __instance.levels.CopyTo(newLevelArray, 0);
-            __instance.levels = newLevelArray;
+        public static void InitializeLevelData(StartOfRound __instance) {
 
-            foreach (CustomLevel moon in CustomLevelList.Values) {
-                SelectableLevel MyNewMoon = moon.NewLevel;
-                /* TODO: these assignments should only be made if there's no entry in any of these arrays already.
-                 * Hopefully, the end user would be able to put their custom monsters/scrap/whatever into the 
-                 * SelectableLevel class they made in unity or set it before this point or something.
-                 * I want to make these default values, but the problem with that is we can't retrieve the instance without it existing.
-                 */
-                MyNewMoon.planetPrefab = __instance.levels[2].planetPrefab;
-                MyNewMoon.spawnableMapObjects = __instance.levels[2].spawnableMapObjects;
-                MyNewMoon.spawnableOutsideObjects = __instance.levels[2].spawnableOutsideObjects;
-                MyNewMoon.spawnableScrap = __instance.levels[2].spawnableScrap;
-                MyNewMoon.Enemies = __instance.levels[5].Enemies;
-                MyNewMoon.levelAmbienceClips = __instance.levels[2].levelAmbienceClips;
-                MyNewMoon.OutsideEnemies = __instance.levels[0].OutsideEnemies;
-                MyNewMoon.DaytimeEnemies = __instance.levels[0].DaytimeEnemies;
-                
-                int num = -1;
-                for (int i = 0; i < __instance.levels.Length; i++) {
-                    if (__instance.levels[i] == null) {
-                        num = i;
-                        break;
-                    }
-                }
-                if (num == -1) {
-                    throw new NullReferenceException("No slot in level list to put new level in!");
-                }
-                __instance.levels[num] = MyNewMoon;
-            }
+            StartOfRound startOfRound = __instance; //Redeclared for more readable variable name
+
+            InitalizeVanillaLevelData(startOfRound);
+            InitalizeCustomLevelData(startOfRound);
+            //ValidateLevelData() //TODO Later
+
             TerminalUtils.AddMoonsToCatalogue();
+        }
+
+        public static void InitalizeVanillaLevelData(StartOfRound startOfRound)
+        {
+            foreach (SelectableLevel vanillaSelectableLevel in startOfRound.levels)
+            {
+                allLevelsList.Add(vanillaSelectableLevel);
+                vanillaLevelsList.Add(vanillaSelectableLevel);
+            }
+        }
+
+        public static void InitalizeCustomLevelData(StartOfRound startOfRound)
+        {
+            foreach (CustomLevel customLevel in _customLevelList)
+            {
+                if (customLevel.SelectableLevel == null)
+                    customLevel.SelectableLevel = GetDefaultSelectableLevel(); //If the CustomLevel doesn't have a supplied SelectableLevel, We make one for it.
+                else
+                {
+                    allLevelsList.Add(customLevel.SelectableLevel);
+                    customLevelsList.Add(customLevel.SelectableLevel);
+                }
+            }
         }
 
         [HarmonyPatch(typeof(StartOfRound), "SceneManager_OnLoadComplete1")]
         [HarmonyPostfix]
-        public static void CreateMoonOnNav(StartOfRound __instance) {
-            if (!CustomLevelList.ContainsKey(__instance.currentLevel.PlanetName)) {
-                return;
-            }
-            CustomLevel LevelToLoad = CustomLevelList[__instance.currentLevel.PlanetName];
-            Debug.Log(" LethalLib Moon Tools: Loading into level " + __instance.currentLevel.PlanetName);
+        public static void InitializeMoon(StartOfRound __instance) {
+            StartOfRound startOfRound = __instance;
 
-            GameObject[] allObjects = GameObject.FindObjectsOfType<GameObject>();
-            foreach (GameObject ObjToDestroy in allObjects) {
-                if (ObjToDestroy.name.Contains("Models2VowFactory")) {
-                    ObjToDestroy.SetActive(false);
-                }
+            if (customLevelsList.Contains(startOfRound.currentLevel))
+            {
+                CustomLevel currentCustomLevel = GetCustomLevel(startOfRound.currentLevel);
+                Debug.Log(" LethalLib Moon Tools: Loading into level " + startOfRound.currentLevel.PlanetName);
 
-                //If the object's named Plane and its parent is Foliage, it's also gotta go. This gets rid of the grass
-                if (ObjToDestroy.name.Contains("Plane") && (ObjToDestroy.transform.parent.gameObject.name.Contains("Foliage") || ObjToDestroy.transform.parent.gameObject.name.Contains("Mounds"))) {
-                    GameObject.Destroy(ObjToDestroy);
-                }
-                foreach (string UnwantedObjString in LevelToLoad.GetDestroyList()) {
-                    //If the object has any of the names in the list, it's gotta go
-                    if (ObjToDestroy.name.Contains(UnwantedObjString)) {
+                foreach (GameObject ObjToDestroy in GameObject.FindObjectsOfType<GameObject>())
+                {
+                    if (ObjToDestroy.name.Contains("Models2VowFactory"))
+                        ObjToDestroy.SetActive(false);
+
+                    if (ObjToDestroy.name.Contains("Plane") && (ObjToDestroy.transform.parent.gameObject.name.Contains("Foliage") || ObjToDestroy.transform.parent.gameObject.name.Contains("Mounds")))
                         GameObject.Destroy(ObjToDestroy);
-                        continue;
+
+                    foreach (string UnwantedObjString in currentCustomLevel.GetDestroyList())
+                    {
+                        //If the object has any of the names in the list, it's gotta go
+                        if (ObjToDestroy.name.Contains(UnwantedObjString))
+                        {
+                            GameObject.Destroy(ObjToDestroy);
+                            continue;
+                        }
                     }
                 }
-            }
-            //Load our custom prefab
-            GameObject MyLevelAsset = LevelToLoad.LevelPrefab as GameObject;
-            GameObject.Instantiate(MyLevelAsset);
 
+                //Load our custom prefab
+                GameObject.Instantiate(currentCustomLevel.LevelPrefab);
+            }
+        }
+
+        public static CustomLevel GetCustomLevel(SelectableLevel selectableLevel)
+        {
+            foreach (CustomLevel customLevel in _customLevelList)
+                if (customLevel.SelectableLevel == selectableLevel)
+                    return (customLevel);
+
+            Debug.LogError("LethalLib: Failed To Find CustomLevel For " + selectableLevel.sceneName);
+            return (null);
+        }
+
+        public static SelectableLevel GetDefaultSelectableLevel()
+        {
+            SelectableLevel newSelectableLevel = new SelectableLevel();
+
+            if (vanillaLevelsList.Count > 6) //Weird check but I like being safe
+            {
+                newSelectableLevel.planetPrefab = vanillaLevelsList[2].planetPrefab;
+                newSelectableLevel.spawnableMapObjects = vanillaLevelsList[2].spawnableMapObjects;
+                newSelectableLevel.spawnableOutsideObjects = vanillaLevelsList[2].spawnableOutsideObjects;
+                newSelectableLevel.spawnableScrap = vanillaLevelsList[2].spawnableScrap;
+                newSelectableLevel.Enemies = vanillaLevelsList[5].Enemies;
+                newSelectableLevel.levelAmbienceClips = vanillaLevelsList[2].levelAmbienceClips;
+                newSelectableLevel.OutsideEnemies = vanillaLevelsList[0].OutsideEnemies;
+                newSelectableLevel.DaytimeEnemies = vanillaLevelsList[0].DaytimeEnemies;
+            }
+            else
+                Debug.LogError("LethalLib: Failed To Get Default SelectableLevel Settings!");
+
+            return (newSelectableLevel);
+        }
+
+        public static void AddCustomLevel(CustomLevel newCustomLevel)
+        {
+            if (!_customLevelList.Contains(newCustomLevel))
+                _customLevelList.Add(newCustomLevel);
+            else
+                Debug.LogError("LethalLib: Failed To Add New CustomLevel, Already Added!");
         }
     }
 }
