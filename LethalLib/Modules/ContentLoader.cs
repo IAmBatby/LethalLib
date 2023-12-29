@@ -94,20 +94,20 @@ namespace LethalLib.Modules
                         itemInfo = modBundle.LoadAsset<TerminalNode>(shopItem.itemInfoPath);
                     }
 
-                    Items.RegisterShopItem(itemAsset, buyNode1, buyNode2, itemInfo, shopItem.initPrice);
+                    //Items.RegisterShopItem(itemAsset, buyNode1, buyNode2, itemInfo, shopItem.initPrice);
                 }
                 else if(content is ScrapItem scrapItem)
                 {
-                    Items.RegisterScrap(itemAsset, scrapItem.Rarity, scrapItem.LevelTypes, scrapItem.levelOverrides);
+                    //Items.RegisterScrap(itemAsset, scrapItem.Rarity, scrapItem.LevelTypes, scrapItem.levelOverrides);
                 }
                 else
                 {
-                    Items.RegisterItem(itemAsset);
+                    //Items.RegisterItem(itemAsset);
                 }
 
                 
             }
-            else if (content is Unlockable unlockable)
+            /*else if (content is Unlockable unlockable)
             {
                 var unlockableAsset = modBundle.LoadAsset<UnlockableItemDef>(unlockable.contentPath);
                 if(unlockableAsset.unlockable.prefabObject != null)
@@ -134,9 +134,9 @@ namespace LethalLib.Modules
                     itemInfo = modBundle.LoadAsset<TerminalNode>(unlockable.itemInfoPath);
                 }
 
-                Unlockables.RegisterUnlockable(unlockableAsset, unlockable.storeType, buyNode1, buyNode2, itemInfo, unlockable.initPrice);
+                //Unlockables.RegisterUnlockable(unlockableAsset, unlockable.storeType, buyNode1, buyNode2, itemInfo, unlockable.initPrice);
 
-            }
+            }*/
             else if (content is CustomEnemy enemy)
             {
                 var enemyAsset = modBundle.LoadAsset<EnemyType>(enemy.contentPath);
@@ -254,12 +254,12 @@ namespace LethalLib.Modules
         {
             public void RemoveFromShop()
             {
-                Items.RemoveShopItem(Item);
+                //Items.RemoveShopItem(Item);
             }
 
             public void SetPrice(int price)
             {
-                Items.UpdateShopItemPrice(Item, price);
+                //Items.UpdateShopItemPrice(Item, price);
             }
 
             public int initPrice = 0;
@@ -286,7 +286,7 @@ namespace LethalLib.Modules
 
             public void RemoveFromLevels(Levels.LevelTypes levelFlags)
             {
-                Items.RemoveScrapFromLevels(Item, levelFlags);
+                //Items.RemoveScrapFromLevels(Item, levelFlags);
             }
 
             public Levels.LevelTypes LevelTypes = Levels.LevelTypes.None;
@@ -300,7 +300,7 @@ namespace LethalLib.Modules
             }
         }
 
-        public class Unlockable : CustomContent
+        /*public class Unlockable : CustomContent
         {
             public Action<UnlockableItem> registryCallback = (unlockable) => { };
             private UnlockableItem unlockable;
@@ -313,19 +313,19 @@ namespace LethalLib.Modules
             public string buyNode1Path = null;
             public string buyNode2Path = null;
             public string itemInfoPath = null;
-            public StoreType storeType = StoreType.None;
+            //public StoreType storeType = StoreType.None;
 
             public void RemoveFromShop()
             {
-                Unlockables.DisableUnlockable(UnlockableItem);
+                //Unlockables.DisableUnlockable(UnlockableItem);
             }
 
             public void SetPrice(int price)
             {
-                Unlockables.UpdateUnlockablePrice(UnlockableItem, price);
+                //Unlockables.UpdateUnlockablePrice(UnlockableItem, price);
             }
 
-            public Unlockable(string id, string contentPath, int price = 0, string buyNode1Path = null, string buyNode2Path = null, string itemInfoPath = null, StoreType storeType = StoreType.None, Action<UnlockableItem> registryCallback = null) : base(id)
+            /*public Unlockable(string id, string contentPath, int price = 0, string buyNode1Path = null, string buyNode2Path = null, string itemInfoPath = null, StoreType storeType = StoreType.None, Action<UnlockableItem> registryCallback = null) : base(id)
             {
                 this.contentPath = contentPath;
                 if(registryCallback != null)
@@ -336,9 +336,9 @@ namespace LethalLib.Modules
                 this.buyNode1Path = buyNode1Path;
                 this.buyNode2Path = buyNode2Path;
                 this.itemInfoPath = itemInfoPath;
-                this.storeType = storeType;
+                //this.storeType = storeType;
             }
-        }
+        }*/
 
         public class CustomEnemy : CustomContent
         {

@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using Unity.Netcode;
 using UnityEngine;
-using static LethalLib.Modules.Items;
+//using static LethalLib.Modules.Items;
 
 namespace LethalLib.Modules
 {

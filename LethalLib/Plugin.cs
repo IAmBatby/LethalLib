@@ -24,6 +24,7 @@ namespace LethalLib
         public const string ModVersion = "0.10.0";
 
         public static AssetBundle MainAssets;
+        private static readonly Harmony Harmony = new Harmony(ModGUID);
 
         public static BepInEx.Logging.ManualLogSource logger;
 
@@ -34,13 +35,17 @@ namespace LethalLib
             Logger.LogInfo($"LethalLib loaded!!");
 
             new ILHook(typeof(StackTrace).GetMethod("AddFrames", BindingFlags.Instance | BindingFlags.NonPublic), IlHook);
+            AssetBundleLoader.Init();
             Enemies.Init();
-            Items.Init();
-            Unlockables.Init();
+            //Items.Init();
+            //Unlockables.Init();
             MapObjects.Init();  
             Dungeon.Init();
             Weathers.Init();
             LethalLib.Modules.NetworkPrefabs.Init();
+            Harmony.PatchAll(typeof(Levels));
+            Harmony.PatchAll(typeof(TerminalUtils));
+            Harmony.PatchAll(typeof(LoadCustomMoon));
            
         }
 

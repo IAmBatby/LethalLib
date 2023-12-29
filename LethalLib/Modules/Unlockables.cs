@@ -2,14 +2,14 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using static LethalLib.Modules.Items;
+//using static LethalLib.Modules.Items;
 using UnityEngine;
 using System.Reflection;
 using LethalLib.Extras;
 using static LethalLib.Extras.UnlockableItemDef;
-using static LethalLib.Modules.Unlockables;
+//using static LethalLib.Modules.Unlockables;
 
-namespace LethalLib.Modules
+/*namespace LethalLib.Modules
 {
     public enum StoreType
     {
@@ -340,11 +340,11 @@ namespace LethalLib.Modules
         ///</summary>
         public static void UpdateUnlockablePrice(UnlockableItem shopItem, int price)
         {
-            if (StartOfRound.Instance != null)
+            /*if (StartOfRound.Instance != null)
             {
-                var buyKeyword = terminal.terminalNodes.allKeywords.First(keyword => keyword.word == "buy");
-                var cancelPurchaseNode = buyKeyword.compatibleNouns[0].result.terminalOptions[1].result;
-                var nouns = buyKeyword.compatibleNouns.ToList();
+                //var buyKeyword = terminal.terminalNodes.allKeywords.First(keyword => keyword.word == "buy");
+                //var cancelPurchaseNode = buyKeyword.compatibleNouns[0].result.terminalOptions[1].result;
+                //var nouns = buyKeyword.compatibleNouns.ToList();
                 RegisteredUnlockable registeredUnlockable = registeredUnlockables.Find(unlock => unlock.unlockable == shopItem);
 
                 if(registeredUnlockable != null && registeredUnlockable.price != -1)
@@ -379,4 +379,4 @@ namespace LethalLib.Modules
             }
         }
     }
-}
+}*/

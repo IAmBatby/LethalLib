@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
-using static LethalLib.Modules.Items;
+//using static LethalLib.Modules.Items;
 using static LethalLib.Plugin;
 using Unity.Netcode;
 using UnityEngine;

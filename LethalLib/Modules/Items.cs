@@ -12,21 +12,21 @@ using System.Reflection;
 using HarmonyLib;
 using UnityEngine;
 using BepInEx.Bootstrap;
-using static LethalLib.Modules.Items;
+//using static LethalLib.Modules.Items;
 using System.Collections;
 using System.Reflection.Emit;
 using UnityEngine.InputSystem;
 using Object = UnityEngine.Object;
 
-namespace LethalLib.Modules
+/*namespace LethalLib.Modules
 {
     public class Items
     {
         public static void Init()
         {
-            On.StartOfRound.Awake += StartOfRound_Awake;
-            On.StartOfRound.Start += StartOfRound_Start;
-            On.Terminal.Awake += Terminal_Awake;
+            //On.StartOfRound.Awake += StartOfRound_Awake;
+            //On.StartOfRound.Start += StartOfRound_Start;
+            //On.Terminal.Awake += Terminal_Awake;
         }
 
         public struct ItemSaveOrderData
@@ -199,7 +199,7 @@ namespace LethalLib.Modules
                 //self.terminalNodes.allKeywords.AddItem(keyword);
                 var allKeywords = self.terminalNodes.allKeywords.ToList();
                 allKeywords.Add(keyword);
-                self.terminalNodes.allKeywords = allKeywords.ToArray();
+                //self.terminalNodes.allKeywords = allKeywords.ToArray();
 
                 var nouns = buyKeyword.compatibleNouns.ToList();
                 nouns.Add(new CompatibleNoun()
@@ -220,7 +220,7 @@ namespace LethalLib.Modules
                     itemInfo.maxCharactersToType = 25;
                 }
 
-                self.terminalNodes.allKeywords = allKeywords.ToArray();
+                //self.terminalNodes.allKeywords = allKeywords.ToArray();
 
                 var itemInfoNouns = infoKeyword.compatibleNouns.ToList();
                 itemInfoNouns.Add(new CompatibleNoun()
@@ -583,4 +583,4 @@ namespace LethalLib.Modules
         }
 
     }
-}
+}*/
