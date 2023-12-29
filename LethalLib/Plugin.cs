@@ -21,7 +21,7 @@ namespace LethalLib
     public class Plugin : BaseUnityPlugin {
         public const string ModGUID = "evaisa.lethallib";
         public const string ModName = "LethalLib";
-        public const string ModVersion = "0.8.0";
+        public const string ModVersion = "0.10.0";
 
         public static AssetBundle MainAssets;
 
