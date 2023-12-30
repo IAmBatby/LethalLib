@@ -174,7 +174,7 @@ namespace LethalLib.Modules
             {
                 Debug.Log("LethalLib (Batby): Adding Vanilla Levels (" + vanillaLevelsList.Count + " Found)");
                 seperationCount = 0;
-                foreach (ExtendedSelectableLevel vanillaLevel in vanillaLevelsList)
+                foreach (ExtendedLevel vanillaLevel in vanillaLevelsList)
                 {
                     Debug.Log("LethalLib (Batby): Listing " + vanillaLevel.SelectableLevel.PlanetName);
                     moonName = new string(vanillaLevel.SelectableLevel.PlanetName.SkipWhile(c => !char.IsLetter(c)).ToArray());
@@ -189,7 +189,7 @@ namespace LethalLib.Modules
 
                 Debug.Log("LethalLib (Batby): Adding Custom Levels (" + customLevelsList.Count + " Found)");
                 seperationCount = 0;
-                foreach (ExtendedSelectableLevel customLevel in customLevelsList)
+                foreach (ExtendedLevel customLevel in customLevelsList)
                 {
                     Debug.Log("LethalLib (Batby): Listing " + customLevel.SelectableLevel.PlanetName);
                     moonName = new string(customLevel.SelectableLevel.PlanetName.SkipWhile(c => !char.IsLetter(c)).ToArray());

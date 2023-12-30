@@ -54,13 +54,13 @@ namespace LethalLib.Modules
         public List<string> GetDestroyList() { return ObjectsToDestroy; }
     }
 
-    public class ExtendedSelectableLevel
+    public class ExtendedLevel
     {
         public SelectableLevel SelectableLevel;
 
-        //public static string LevelSource = "Lethal Company"; //Levels from AssetBundles will have this as their Assembly Name.
+        public static string sourceName = "Lethal Company"; //Levels from AssetBundles will have this as their Assembly Name.
 
-        public enum LevelType { Vanilla, Custom }
+        public enum LevelType { Vanilla, Custom, Any } //Any included for built in checks.
         public LevelType levelType;
 
         //Type & Built-In NullCheck.
@@ -76,7 +76,7 @@ namespace LethalLib.Modules
             }
         }
 
-        public ExtendedSelectableLevel(SelectableLevel newSelectableLevel, CustomLevelData newCustomLevelData = null)
+        public ExtendedLevel(SelectableLevel newSelectableLevel, string newSourceName = default, CustomLevelData newCustomLevelData = null)
         {
             if (newCustomLevelData == null)
                 levelType = LevelType.Vanilla;
@@ -84,12 +84,13 @@ namespace LethalLib.Modules
             {
                 levelType = LevelType.Custom;
 
-                newSelectableLevel.levelID = 9 + Levels.customLevelsList.Count;
-                //newSelectableLevel.levelID = 2;
-                newSelectableLevel.sceneName = "InitSceneLaunchOptions";
+                if (newSourceName != string.Empty)
+                    sourceName = newSourceName;
+
+                newSelectableLevel.levelID = 9 + Levels.customLevelsList.Count; //Hardcoded Vanilla level length + how many custom moons are already loaded. If I can refine order of execution we can remove the hardcoded value here
+                newSelectableLevel.sceneName = "InitSceneLaunchOptions"; //This is the scene we inject our custom moon into.
 
                 customLevelData = newCustomLevelData;
-                //customLevelData.levelRouteNode.buyRerouteToMoon = newSelectableLevel.levelID;
                 customLevelData.levelRouteNode.displayPlanetInfo = newSelectableLevel.levelID;
                 customLevelData.levelRouteConfirmNode.buyRerouteToMoon = newSelectableLevel.levelID;
 

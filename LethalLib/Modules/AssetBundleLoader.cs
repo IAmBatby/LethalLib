@@ -64,6 +64,7 @@ namespace LethalLib.Modules
             if (newBundle != null)
             {
                 string debugString = "LethalLib (Batby): AssetBundle Found, Logging Files Inside Below: " + "\n";
+                string sourceName = newBundle.name;
 
                 foreach (string name in newBundle.GetAllAssetNames())
                     debugString += name + "\n";
@@ -114,7 +115,7 @@ namespace LethalLib.Modules
                     {
                         Debug.Log("LethalLib (Batby): Adding " + selectableLevel.PlanetName);
                         CustomLevelData newCustomLevelData = new CustomLevelData(levelPrefab, levelRoute, levelConfirmRoute, levelInfo, levelKeyword);
-                        ExtendedSelectableLevel extendedLevel = new ExtendedSelectableLevel(selectableLevel, newCustomLevelData);
+                        ExtendedLevel extendedLevel = new ExtendedLevel(selectableLevel, sourceName, newCustomLevelData);
                     }
                 }
             }

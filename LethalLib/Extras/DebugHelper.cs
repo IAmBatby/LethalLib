@@ -75,7 +75,7 @@ namespace LethalLib.Extras
         {
             string logString = "All Levels List: " + "\n" + "\n";
 
-            foreach (ExtendedSelectableLevel extendedLevel in Levels.allLevelsList)
+            foreach (ExtendedLevel extendedLevel in Levels.allLevelsList)
                 logString += extendedLevel.SelectableLevel.PlanetName + " (" + extendedLevel.SelectableLevel.levelID + ") " + "\n";
 
             Log(logString + "\n");
@@ -85,7 +85,7 @@ namespace LethalLib.Extras
         {
             string logString = "Vanilla Levels List: " + "\n" + "\n";
 
-            foreach (ExtendedSelectableLevel extendedLevel in Levels.vanillaLevelsList)
+            foreach (ExtendedLevel extendedLevel in Levels.vanillaLevelsList)
                 logString += extendedLevel.SelectableLevel.PlanetName + " (" + extendedLevel.SelectableLevel.levelID + ") " + "\n";
 
             Log(logString + "\n");
@@ -95,7 +95,7 @@ namespace LethalLib.Extras
         {
             string logString = "Custom Levels List: " + "\n" + "\n";
 
-            foreach (ExtendedSelectableLevel extendedLevel in Levels.customLevelsList)
+            foreach (ExtendedLevel extendedLevel in Levels.customLevelsList)
                 logString += extendedLevel.SelectableLevel.PlanetName + " (" + extendedLevel.SelectableLevel.levelID + ") " + "\n";
 
             Log(logString + "\n");

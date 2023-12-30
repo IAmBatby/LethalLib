@@ -8,6 +8,7 @@ using System.Collections;
 using LethalLib.Modules;
 using LethalLib.Extras;
 
+//Jank hotfix to load terrain later so Unity doesn't get overwhelmed.
 public class TerrainInfo
 {
     public TerrainCollider terrainCollider;
@@ -17,19 +18,18 @@ public class TerrainInfo
 
 public class LoadCustomMoon
 {
-    //public static ManualLogSource Logger;
     public static bool isInGame;
     public static bool customMoonLoaded;
     public static Coroutine startCoroutine;
     public static TerrainInfo sceneTerrainInfo;
-
-    public static GameObject terrainfixer;
-
     public static bool isMoonInjected;
 
+    //Jank hotfix to load terrain later so Unity doesn't get overwhelmed.
     public static int terrainFrameDelay = 0;
     public static int terrainFrameDelayMax = 1200;
 
+    //Tiny temp terrain generated to preload terrain shaders so Unity doesn't get overwhelmed (Credit: Holo)
+    public static GameObject terrainfixer;
     private static int width = 256;
     private static int height = 256;
     private static int depth = 20;
@@ -46,7 +46,6 @@ public class LoadCustomMoon
         }
         return heights;
     }
-
     static float CalculateHeight(int x, int y)
     {
         float xCoord = (float)x / width * scale;
@@ -57,7 +56,7 @@ public class LoadCustomMoon
 
     [HarmonyPatch(typeof(RoundManager), "LoadNewLevel")]
     [HarmonyPrefix]
-    public static bool LoadNewLevelPrefix(int randomSeed, SelectableLevel newLevel)
+    public static bool LoadNewLevel_PreFix(int randomSeed, SelectableLevel newLevel)
     {
         if (startCoroutine != null)
             return (false);
@@ -77,29 +76,19 @@ public class LoadCustomMoon
         }
     }
 
-
-    [HarmonyPatch(typeof(RoundManager), "Start")]
-    [HarmonyPrefix]
-    public static void RoundManagerStart(RoundManager __instance)
-    {
-        DebugHelper.Log("TimeOfDay Is: " + (__instance.timeScript != null));
-        __instance.timeScript = TimeOfDay.Instance;
-        DebugHelper.Log("TimeOfDay Is: " + (__instance.timeScript != null));
-    }
-
     [HarmonyPatch(typeof(RoundManager), "Update")]
     [HarmonyPrefix]
-    public static void RoundManagerUpdatePrefix(RoundManager __instance)
+    public static void Update_Prefix(RoundManager __instance)
     {
 
-        if (__instance.timeScript == null)
+        if (__instance.timeScript == null) //I don't know why but RoundManager loses it's TimeOfDay reference.
             __instance.timeScript = TimeOfDay.Instance;
 
     }
 
     [HarmonyPatch(typeof(RoundManager), "Update")]
     [HarmonyPostfix]
-    public static void RoundManagerUpdatePostfix(RoundManager __instance)
+    public static void Update_PostFix(RoundManager __instance)
     {
         if (sceneTerrainInfo != null)
         {
@@ -129,69 +118,34 @@ public class LoadCustomMoon
         DebugHelper.Log("Starting Game Prefix!");
         DebugHelper.Log("Current Level Is: " + StartOfRound.Instance.currentLevel.PlanetName + " (" + StartOfRound.Instance.currentLevelID + ") ");
         DebugHelper.Log("Current Level SceneName Is: " + StartOfRound.Instance.currentLevel.sceneName);
-
-        //CheckMoon();
     }
 
     [HarmonyPatch(typeof(StartOfRound), "SceneManager_OnLoadComplete1")]
     [HarmonyPostfix]
-    public static void CheckMoon()
+    public static void SceneManager_OnLoadComplete1_PostFix()
     {
-        Scene scene;
-
-        scene = SceneManager.GetSceneByName("SampleSceneRelay");
-        if (scene != null)
-        {
-            DebugHelper.Log("Attempting To Load TerrainShader");
-            terrainfixer = new GameObject();
-            terrainfixer.name = "terrainfixer";
-            terrainfixer.transform.position = new Vector3(0, -500, 0);
-            Terrain terrain = terrainfixer.AddComponent<Terrain>();
-            TerrainData terrainData = new TerrainData();
-            terrainData.heightmapResolution = width + 1;
-            terrainData.size = new Vector3(width, depth, height);
-            terrainData.SetHeights(0, 0, GenerateHeights());
-            terrain.terrainData = terrainData;
-        }
-
-        if (isInGame == false)
-        {
-            scene = SceneManager.GetSceneByName("MainMenu");
-
-            if (scene != null)
-                isInGame = true;
-        }
-        else
-        {
-            //Logger.LogInfo("Checking Moon!");
-            scene = SceneManager.GetSceneByName("InitSceneLaunchOptions");
-            if (scene != null)
-            {
-                if (terrainfixer != null)
-                {
-                    terrainfixer.SetActive(false);
-                    //GameObject.Destroy(terrainfixer);
-                }
-                //Debug.Log("Attempting To Inject Custom Moon: " + Terminal_Patch.newMoons[StartOfRound.Instance.currentLevelID].MoonName);
+        if (SceneManager.GetSceneByName("SampleSceneRelay") != null)
+            PreloadTerrainShader();
+        if (SceneManager.GetSceneByName("MainMenu") != null) //IsInGame check to stop us from trying to inject before the intended InitSceneLaunchOptions usage.
+            isInGame = true;
+        if (SceneManager.GetSceneByName("InitSceneLaunchOptions") != null)
+            if (isInGame == true)
                 InjectCustomMoon(SceneManager.GetSceneByName("InitSceneLaunchOptions"), true);
-                Debug.Log("Custom Moon Successfully Injected! Continuing Level Initialization.");
-                customMoonLoaded = true;
-            }
-        }
     }
 
     public static void InjectCustomMoon(Scene scene, bool disableTerrainOnFirstFrame = false)
     {
         GameObject injectionPrefab;
 
+        if (terrainfixer != null)
+            terrainfixer.SetActive(false);
+
         if (isMoonInjected == false)
         {
-            foreach (GameObject obj in scene.GetRootGameObjects())
+            foreach (GameObject obj in scene.GetRootGameObjects()) //Disable everything in the Scene were injecting into
                 obj.SetActive(false);
 
-            //GameObject injectionPrefab = StartOfRound.Instance.currentLevel
-
-            if (Levels.TryGetExtendedLevel(StartOfRound.Instance.currentLevel, out ExtendedSelectableLevel extendedLevel))
+            if (Levels.TryGetExtendedLevel(StartOfRound.Instance.currentLevel, out ExtendedLevel extendedLevel))
             {
                 injectionPrefab = extendedLevel.CustomLevel.levelPrefab;
 
@@ -200,25 +154,22 @@ public class LoadCustomMoon
                     GameObject mainPrefab = GameObject.Instantiate(injectionPrefab);
                     if (mainPrefab != null)
                     {
-                        //Logger.LogInfo("Custom Moon Successfully Created! : " + scene.name);
-
-                        SceneManager.MoveGameObjectToScene(mainPrefab, scene);
+                        SceneManager.MoveGameObjectToScene(mainPrefab, scene); //We move and detatch to replicate vanilla moon scene hierarchy.
                         mainPrefab.transform.DetachChildren();
                         mainPrefab.SetActive(false);
 
-                        if (disableTerrainOnFirstFrame == true)
-                        {
+                        if (disableTerrainOnFirstFrame == true) //Jank hotfix to load terrain later so Unity doesn't get overwhelmed.
                             DisableTerrain();
-                        }
                     }
                 }
             }
 
             isMoonInjected = true;
+            customMoonLoaded = true;
         }
     }
 
-    public static void DisableTerrain()
+    public static void DisableTerrain() //Jank hotfix to load terrain later so Unity doesn't get overwhelmed.
     {
         Debug.Log("Attempting To Disable Terrain Related Components!");
         Terrain terrain = GameObject.FindObjectOfType<Terrain>();
@@ -243,7 +194,7 @@ public class LoadCustomMoon
             Debug.Log("Failed To Disable Terrain!");
     }
 
-    public static void EnableTerrain()
+    public static void EnableTerrain() //Jank hotfix to load terrain later so Unity doesn't get overwhelmed.
     {
         Debug.Log("Attempting To Enable Terrain Related Components!");
 
@@ -261,5 +212,18 @@ public class LoadCustomMoon
             Debug.Log("Failed To Enable Terrain!");
     }
 
+    public static void PreloadTerrainShader() //Tiny temp terrain generated to preload terrain shaders so Unity doesn't get overwhelmed (Credit: Holo)
+    {
+        DebugHelper.Log("Attempting To Load TerrainShader");
+        terrainfixer = new GameObject();
+        terrainfixer.name = "terrainfixer";
+        terrainfixer.transform.position = new Vector3(0, -500, 0);
+        Terrain terrain = terrainfixer.AddComponent<Terrain>();
+        TerrainData terrainData = new TerrainData();
+        terrainData.heightmapResolution = width + 1;
+        terrainData.size = new Vector3(width, depth, height);
+        terrainData.SetHeights(0, 0, GenerateHeights());
+        terrain.terrainData = terrainData;
+    }
 
 }
