@@ -35,6 +35,7 @@ namespace LethalLib.Modules
             levelRouteConfirmNode = newRouteConfirmNode;
             levelInfoNode = newInfoNode;
             levelKeyword = newTerminalKeyword;
+            levelKeyword.defaultVerb = TerminalUtils.RouteKeyword;
 
     
             //TerminalUtils.AddRouteNode(levelRouteNode);
@@ -94,6 +95,10 @@ namespace LethalLib.Modules
 
                 TerminalUtils.AddTerminalKeyword(customLevelData.levelKeyword);
                 TerminalUtils.AddRouteNode(customLevelData.levelKeyword, customLevelData.levelRouteNode);
+
+
+                ///These Will Not Stay
+                ///
             }
 
             SelectableLevel = newSelectableLevel;

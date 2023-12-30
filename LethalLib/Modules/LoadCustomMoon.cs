@@ -23,33 +23,37 @@ public class LoadCustomMoon
     public static Coroutine startCoroutine;
     public static TerrainInfo sceneTerrainInfo;
 
-    public static int terrainFrameDelay = 0;
-    public static int terrainFrameDelayMax = 500;
+    public static GameObject terrainfixer;
 
-    /*[HarmonyPatch(typeof(StartOfRound), "OnEnable")]
-    [HarmonyPrefix]
-    public static void OnEnablePrefix()
+    public static bool isMoonInjected;
+
+    public static int terrainFrameDelay = 0;
+    public static int terrainFrameDelayMax = 1200;
+
+    private static int width = 256;
+    private static int height = 256;
+    private static int depth = 20;
+    private static float scale = 20f;
+    static float[,] GenerateHeights()
     {
-        Debug.Log("Enabling connection callbacks in StartOfRound");
-        if (NetworkManager.Singleton != null)
+        float[,] heights = new float[width, height];
+        for (int x = 0; x < width; x++)
         {
-            StartOfRound startOfRound = StartOfRound.Instance;
-            Debug.Log("Began listening to SceneManager_OnLoadComplete1 on this client");
-            try
+            for (int y = 0; y < height; y++)
             {
-                NetworkManager.Singleton.SceneManager.OnLoadEventCompleted += EnableTerrain2;
+                heights[x, y] = CalculateHeight(x, y);
             }
-            catch (Exception arg)
-            {
-                Debug.LogError(string.Format("Error returned when subscribing to scenemanager callbacks!: {0}", arg));
-                GameNetworkManager.Instance.disconnectionReasonMessage = "An error occured when syncing the scene! The host might not have loaded in.";
-                GameNetworkManager.Instance.Disconnect();
-                return;
-            }
-            bool isServer = startOfRound.IsServer;
-            return;
         }
-    }*/
+        return heights;
+    }
+
+    static float CalculateHeight(int x, int y)
+    {
+        float xCoord = (float)x / width * scale;
+        float yCoord = (float)y / height * scale;
+
+        return Mathf.PerlinNoise(xCoord, yCoord);
+    }
 
     [HarmonyPatch(typeof(RoundManager), "LoadNewLevel")]
     [HarmonyPrefix]
@@ -73,12 +77,30 @@ public class LoadCustomMoon
         }
     }
 
+
+    [HarmonyPatch(typeof(RoundManager), "Start")]
+    [HarmonyPrefix]
+    public static void RoundManagerStart(RoundManager __instance)
+    {
+        DebugHelper.Log("TimeOfDay Is: " + (__instance.timeScript != null));
+        __instance.timeScript = TimeOfDay.Instance;
+        DebugHelper.Log("TimeOfDay Is: " + (__instance.timeScript != null));
+    }
+
+    [HarmonyPatch(typeof(RoundManager), "Update")]
+    [HarmonyPrefix]
+    public static void RoundManagerUpdatePrefix(RoundManager __instance)
+    {
+
+        if (__instance.timeScript == null)
+            __instance.timeScript = TimeOfDay.Instance;
+
+    }
+
     [HarmonyPatch(typeof(RoundManager), "Update")]
     [HarmonyPostfix]
-    public static void Update()
+    public static void RoundManagerUpdatePostfix(RoundManager __instance)
     {
-        //if (terrainFrameDelay != terrainFrameDelayMax)
-        //Debug.Log("Hijacked Update Running!");
         if (sceneTerrainInfo != null)
         {
             if (terrainFrameDelay == terrainFrameDelayMax)
@@ -92,14 +114,6 @@ public class LoadCustomMoon
         }
     }
 
-    /*[HarmonyPatch(typeof(StartOfRound), "openingDoorsSequence")]
-    [HarmonyPrefix]
-    public static void openingDoorsSequence()
-    {
-        if (sceneTerrainInfo != null)
-                EnableTerrain();
-    }*/
-
     public static IEnumerator WaitForSceneToLoad(int randomSeed, SelectableLevel newLevel)
     {
         yield return new WaitUntil(() => customMoonLoaded);
@@ -108,13 +122,15 @@ public class LoadCustomMoon
         yield break;///
     }
 
-    [HarmonyPatch(typeof(StartOfRound), "SceneManager_OnLoadComplete1")]
+    [HarmonyPatch(typeof(StartOfRound), "StartGame")]
     [HarmonyPrefix]
     public static void StartGame()
     {
         DebugHelper.Log("Starting Game Prefix!");
         DebugHelper.Log("Current Level Is: " + StartOfRound.Instance.currentLevel.PlanetName + " (" + StartOfRound.Instance.currentLevelID + ") ");
         DebugHelper.Log("Current Level SceneName Is: " + StartOfRound.Instance.currentLevel.sceneName);
+
+        //CheckMoon();
     }
 
     [HarmonyPatch(typeof(StartOfRound), "SceneManager_OnLoadComplete1")]
@@ -122,9 +138,26 @@ public class LoadCustomMoon
     public static void CheckMoon()
     {
         Scene scene;
+
+        scene = SceneManager.GetSceneByName("SampleSceneRelay");
+        if (scene != null)
+        {
+            DebugHelper.Log("Attempting To Load TerrainShader");
+            terrainfixer = new GameObject();
+            terrainfixer.name = "terrainfixer";
+            terrainfixer.transform.position = new Vector3(0, -500, 0);
+            Terrain terrain = terrainfixer.AddComponent<Terrain>();
+            TerrainData terrainData = new TerrainData();
+            terrainData.heightmapResolution = width + 1;
+            terrainData.size = new Vector3(width, depth, height);
+            terrainData.SetHeights(0, 0, GenerateHeights());
+            terrain.terrainData = terrainData;
+        }
+
         if (isInGame == false)
         {
             scene = SceneManager.GetSceneByName("MainMenu");
+
             if (scene != null)
                 isInGame = true;
         }
@@ -134,6 +167,11 @@ public class LoadCustomMoon
             scene = SceneManager.GetSceneByName("InitSceneLaunchOptions");
             if (scene != null)
             {
+                if (terrainfixer != null)
+                {
+                    terrainfixer.SetActive(false);
+                    //GameObject.Destroy(terrainfixer);
+                }
                 //Debug.Log("Attempting To Inject Custom Moon: " + Terminal_Patch.newMoons[StartOfRound.Instance.currentLevelID].MoonName);
                 InjectCustomMoon(SceneManager.GetSceneByName("InitSceneLaunchOptions"), true);
                 Debug.Log("Custom Moon Successfully Injected! Continuing Level Initialization.");
@@ -146,32 +184,37 @@ public class LoadCustomMoon
     {
         GameObject injectionPrefab;
 
-        foreach (GameObject obj in scene.GetRootGameObjects())
-            obj.SetActive(false);
-
-        //GameObject injectionPrefab = StartOfRound.Instance.currentLevel
-
-        if (Levels.TryGetExtendedLevel(StartOfRound.Instance.currentLevel, out ExtendedSelectableLevel extendedLevel))
+        if (isMoonInjected == false)
         {
-            injectionPrefab = extendedLevel.CustomLevel.levelPrefab;
+            foreach (GameObject obj in scene.GetRootGameObjects())
+                obj.SetActive(false);
 
-            if (injectionPrefab != null)
+            //GameObject injectionPrefab = StartOfRound.Instance.currentLevel
+
+            if (Levels.TryGetExtendedLevel(StartOfRound.Instance.currentLevel, out ExtendedSelectableLevel extendedLevel))
             {
-                GameObject mainPrefab = GameObject.Instantiate(injectionPrefab);
-                if (mainPrefab != null)
+                injectionPrefab = extendedLevel.CustomLevel.levelPrefab;
+
+                if (injectionPrefab != null)
                 {
-                    //Logger.LogInfo("Custom Moon Successfully Created! : " + scene.name);
-
-                    SceneManager.MoveGameObjectToScene(mainPrefab, scene);
-                    mainPrefab.transform.DetachChildren();
-                    mainPrefab.SetActive(false);
-
-                    if (disableTerrainOnFirstFrame == true)
+                    GameObject mainPrefab = GameObject.Instantiate(injectionPrefab);
+                    if (mainPrefab != null)
                     {
-                        DisableTerrain();
+                        //Logger.LogInfo("Custom Moon Successfully Created! : " + scene.name);
+
+                        SceneManager.MoveGameObjectToScene(mainPrefab, scene);
+                        mainPrefab.transform.DetachChildren();
+                        mainPrefab.SetActive(false);
+
+                        if (disableTerrainOnFirstFrame == true)
+                        {
+                            DisableTerrain();
+                        }
                     }
                 }
             }
+
+            isMoonInjected = true;
         }
     }
 
@@ -217,4 +260,6 @@ public class LoadCustomMoon
         else
             Debug.Log("Failed To Enable Terrain!");
     }
+
+
 }

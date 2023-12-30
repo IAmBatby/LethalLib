@@ -102,7 +102,21 @@ namespace LethalLib.Modules
 
                 DebugHelper.DebugAllLevels();
                 DebugHelper.DebugInjectedLevels();
+
+                foreach (ExtendedSelectableLevel extendedLevel in customLevelsList)
+                    PatchCustomLevel(extendedLevel);
             }
+        }
+
+        public static void PatchCustomLevel(ExtendedSelectableLevel extendedLevel)
+        {
+            DebugHelper.Log("Patching Custom Level: " + extendedLevel.SelectableLevel.PlanetName);
+            extendedLevel.SelectableLevel.spawnableScrap = vanillaLevelsList[6].SelectableLevel.spawnableScrap;
+            extendedLevel.SelectableLevel.spawnableOutsideObjects = vanillaLevelsList[6].SelectableLevel.spawnableOutsideObjects;
+            extendedLevel.SelectableLevel.spawnableMapObjects = vanillaLevelsList[6].SelectableLevel.spawnableMapObjects;
+            extendedLevel.SelectableLevel.Enemies = vanillaLevelsList[6].SelectableLevel.Enemies;
+            extendedLevel.SelectableLevel.OutsideEnemies = vanillaLevelsList[6].SelectableLevel.OutsideEnemies;
+            extendedLevel.SelectableLevel.DaytimeEnemies = vanillaLevelsList[6].SelectableLevel.DaytimeEnemies;
         }
 
         public static bool TryGetExtendedLevel(SelectableLevel selectableLevel, out ExtendedSelectableLevel returnExtendedLevel)
