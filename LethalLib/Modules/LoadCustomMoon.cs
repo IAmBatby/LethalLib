@@ -54,28 +54,6 @@ public class LoadCustomMoon
         return Mathf.PerlinNoise(xCoord, yCoord);
     }
 
-    [HarmonyPatch(typeof(RoundManager), "LoadNewLevel")]
-    [HarmonyPrefix]
-    public static bool LoadNewLevel_PreFix(int randomSeed, SelectableLevel newLevel)
-    {
-        if (startCoroutine != null)
-            return (false);
-
-        if (customMoonLoaded == false)
-        {
-            Debug.Log("Custom Moon Not Loaded! Waiting!");
-            startCoroutine = RoundManager.Instance.StartCoroutine(WaitForSceneToLoad(randomSeed, newLevel));
-            return (false);
-        }
-        else
-        {
-            Debug.Log("Custom Moon Loaded! Lets Get It!");
-            customMoonLoaded = false;
-            //RoundManager.Instance.LoadNewLevel(randomSeed, newLevel);
-            return (true);
-        }
-    }
-
     [HarmonyPatch(typeof(RoundManager), "Update")]
     [HarmonyPrefix]
     public static void Update_Prefix(RoundManager __instance)
@@ -101,14 +79,6 @@ public class LoadCustomMoon
             else
                 terrainFrameDelay++;
         }
-    }
-
-    public static IEnumerator WaitForSceneToLoad(int randomSeed, SelectableLevel newLevel)
-    {
-        yield return new WaitUntil(() => customMoonLoaded);
-        startCoroutine = null;
-        RoundManager.Instance.LoadNewLevel(randomSeed, newLevel);
-        yield break;///
     }
 
     [HarmonyPatch(typeof(StartOfRound), "StartGame")]

@@ -1,6 +1,7 @@
 ﻿using HarmonyLib;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using UnityEngine;
 
@@ -13,7 +14,6 @@ namespace LethalLib.Modules
         public TerminalNode levelRouteConfirmNode;
         public TerminalNode levelInfoNode;
         public TerminalKeyword levelKeyword;
-
 
         private static List<string> ObjectsToDestroy = new List<string> {
                 "CompletedVowTerrain",
@@ -58,7 +58,17 @@ namespace LethalLib.Modules
     {
         public SelectableLevel SelectableLevel;
 
-        public static string sourceName = "Lethal Company"; //Levels from AssetBundles will have this as their Assembly Name.
+        public string sourceName = "Lethal Company"; //Levels from AssetBundles will have this as their Assembly Name.
+        public string NumberlessPlanetName
+        {
+            get
+            {
+                if (SelectableLevel != null)
+                    return new string(SelectableLevel.PlanetName.SkipWhile(c => !char.IsLetter(c)).ToArray());
+                else
+                    return null;
+            }
+        } //ChatGPT did this one i'll be honest.
 
         public enum LevelType { Vanilla, Custom, Any } //Any included for built in checks.
         public LevelType levelType;
