@@ -44,11 +44,7 @@ namespace LethalLib.Modules
             get
             {
                 if (RouteKeyword != null)
-                {
-                    //DebugHelper.Log(RouteKeyword.compatibleNouns[0].result.ToString());
-                    //DebugHelper.Log(RouteKeyword.compatibleNouns[0].result.terminalOptions.Length.ToString());
                     return (RouteKeyword.compatibleNouns[0].result.terminalOptions[0].result);
-                }
                 else
                     return (null);
             }
@@ -211,17 +207,6 @@ namespace LethalLib.Modules
             terminalNodeRoute.terminalOptions = terminalNodeRoute.terminalOptions.AddItem(routeDeny).ToArray();
             terminalNodeRoute.terminalOptions = terminalNodeRoute.terminalOptions.AddItem(routeConfirm).ToArray();
 
-            DebugHelper.DebugTerminalNode(extendedLevel.CustomLevel.levelRouteNode);
-
-            //terminalNodeRoute.displayText = extendedLevel.CustomLevel.levelRouteNode.displayText;
-
-            //terminalNodeRoute.terminalOptions = extendedLevel.CustomLevel.levelRouteNode.terminalOptions;
-
-            DebugHelper.DebugTerminalNode(terminalNodeRoute);
-
-            //AddTerminalKeyword(terminalKeyword);
-            //AddRouteNode(terminalKeyword, terminalNodeRoute);
-
             CompatibleNoun routeLevel = new CompatibleNoun();
 
             routeLevel.noun = terminalKeyword;
@@ -229,11 +214,6 @@ namespace LethalLib.Modules
 
             Terminal.terminalNodes.allKeywords = Terminal.terminalNodes.allKeywords.AddItem(terminalKeyword).ToArray();
             tempRouteKeyword.compatibleNouns = tempRouteKeyword.compatibleNouns.AddItem(routeLevel).ToArray();
-
-            extendedLevel.CustomLevel.levelKeyword = terminalKeyword;
-            extendedLevel.CustomLevel.levelInfoNode = terminalNodeInfo;
-            extendedLevel.CustomLevel.levelRouteNode = terminalNodeRoute;
-            extendedLevel.CustomLevel.levelRouteConfirmNode = terminalNodeRouteConfirm;
         }
 
         public static TerminalKeyword GetTerminalKeywordFromIndex(int index)

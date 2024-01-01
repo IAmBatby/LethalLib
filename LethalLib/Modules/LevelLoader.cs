@@ -116,9 +116,9 @@ public class LevelLoader
 
             if (Levels.TryGetExtendedLevel(StartOfRound.Instance.currentLevel, out ExtendedLevel extendedLevel))
             {
-                if (extendedLevel.CustomLevel.levelPrefab != null)
+                if (extendedLevel.selectableLevel.planetPrefab != null)
                 {
-                    GameObject mainPrefab = GameObject.Instantiate(extendedLevel.CustomLevel.levelPrefab);
+                    GameObject mainPrefab = GameObject.Instantiate(extendedLevel.selectableLevel.planetPrefab);
                     if (mainPrefab != null)
                     {
                         SceneManager.MoveGameObjectToScene(mainPrefab, scene); //We move and detatch to replicate vanilla moon scene hierarchy.
@@ -144,16 +144,16 @@ public class LevelLoader
         RoundManager roundManager = __instance;
         RuntimeDungeon runtimeDungeon = UnityEngine.Object.FindObjectOfType<RuntimeDungeon>(false);
         if (Levels.TryGetExtendedLevel(StartOfRound.Instance.currentLevel, out ExtendedLevel extendedLevel))
-            if (extendedLevel.CustomLevel.levelPrefab != null)
+            if (extendedLevel.selectableLevel.planetPrefab != null)
             {
-                EntranceTeleport[] customMoonEntrances = extendedLevel.CustomLevel.levelPrefab.GetComponentsInChildren<EntranceTeleport>();
+                EntranceTeleport[] customMoonEntrances = extendedLevel.selectableLevel.planetPrefab.GetComponentsInChildren<EntranceTeleport>();
                 if (runtimeDungeon != null && roundManager != null)
                     foreach (DungeonFlow dungeonFlow in roundManager.dungeonFlowTypes)
                         foreach (GlobalPropSettings globalProp in dungeonFlow.GlobalProps)
                             if (globalProp.ID == 1231)
                             {
                                 cachedGlobalPropList.Add((globalProp, new IntRange(globalProp.Count.Min, globalProp.Count.Max)));
-                                globalProp.Count = new IntRange(customMoonEntrances.Length, customMoonEntrances.Length);
+                                globalProp.Count = new IntRange(customMoonEntrances.Length - 1, customMoonEntrances.Length - 1); //-1 Because that Array contains the Main Entrance which is handled by a seperate Global Prop.
                             }
             }
     }

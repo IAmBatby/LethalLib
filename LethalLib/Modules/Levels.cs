@@ -58,7 +58,7 @@ namespace LethalLib.Modules
 
             Debug.Log("LethalLib (Batby): Initializing Level Data");
             foreach (SelectableLevel vanillaSelectableLevel in startOfRound.levels)
-                new ExtendedLevel(vanillaSelectableLevel);
+                new ExtendedLevel(vanillaSelectableLevel, LevelType.Vanilla, generateTerminalAssets: false);
 
             //Our AsssetBundle stuff runs before this function so atleast for now I just manually re-order the allLevelsList so its Vanilla -> Custom
 
@@ -74,7 +74,7 @@ namespace LethalLib.Modules
 
         public static void AddSelectableLevel(ExtendedLevel extendedLevel)
         {
-            if (extendedLevel.levelType == ExtendedLevel.LevelType.Custom)
+            if (extendedLevel.levelType == LevelType.Custom)
                 customLevelsList.Add(extendedLevel);
             else
                 vanillaLevelsList.Add(extendedLevel);
@@ -155,20 +155,20 @@ namespace LethalLib.Modules
             }
         }
 
-        public static bool TryGetExtendedLevel(SelectableLevel selectableLevel, out ExtendedLevel returnExtendedLevel, ExtendedLevel.LevelType levelType = ExtendedLevel.LevelType.Any)
+        public static bool TryGetExtendedLevel(SelectableLevel selectableLevel, out ExtendedLevel returnExtendedLevel, LevelType levelType = LevelType.Any)
         {
             returnExtendedLevel = null;
             List<ExtendedLevel> extendedLevelsList = new List<ExtendedLevel>();
 
             switch (levelType)
             {
-                case ExtendedLevel.LevelType.Vanilla:
+                case LevelType.Vanilla:
                     extendedLevelsList = vanillaLevelsList;
                     break;
-                case ExtendedLevel.LevelType.Custom:
+                case LevelType.Custom:
                     extendedLevelsList = customLevelsList;
                     break;
-                case ExtendedLevel.LevelType.Any:
+                case LevelType.Any:
                     extendedLevelsList = allLevelsList;
                     break;
             }

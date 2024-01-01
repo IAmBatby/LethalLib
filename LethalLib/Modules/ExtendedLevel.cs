@@ -8,49 +8,7 @@ using UnityEngine;
 
 namespace LethalLib.Modules
 {
-    public class CustomLevelData //This could be better as a struct, Not sure let me know.
-    {
-        public GameObject levelPrefab;
-        public TerminalNode levelRouteNode;
-        public TerminalNode levelRouteConfirmNode;
-        public TerminalNode levelInfoNode;
-        public TerminalKeyword levelKeyword;
-
-        private static List<string> ObjectsToDestroy = new List<string> {
-                "CompletedVowTerrain",
-                "tree",
-                "Tree",
-                "Rock",
-                "StaticLightingSky",
-                "ForestAmbience",
-                "Local Volumetric Fog",
-                "GroundFog",
-                "Sky and Fog Global Volume",
-                "SunTexture"
-            };
-
-        public CustomLevelData(GameObject newLevelPrefab, TerminalNode newRouteNode, TerminalNode newRouteConfirmNode, TerminalNode newInfoNode, TerminalKeyword newTerminalKeyword)
-        {
-            levelPrefab = newLevelPrefab;
-            levelRouteNode = newRouteNode;
-            levelRouteConfirmNode = newRouteConfirmNode;
-            levelInfoNode = newInfoNode;
-            levelKeyword = newTerminalKeyword;
-            levelKeyword.defaultVerb = TerminalUtils.RouteKeyword;
-        }
-
-        public static void AddObjectToDestroyList(string NewObjectName)
-        {
-            ObjectsToDestroy.Add(NewObjectName);
-        }
-
-        public static void ClearObjectToDestroyList()
-        {
-            ObjectsToDestroy.Clear();
-        }
-
-        public List<string> GetDestroyList() { return ObjectsToDestroy; }
-    }
+    public enum LevelType { Vanilla, Custom, Any } //Any included for built in checks.
 
     public class ExtendedLevel
     {
@@ -68,49 +26,22 @@ namespace LethalLib.Modules
             }
         } //ChatGPT did this one i'll be honest.
 
-        public enum LevelType { Vanilla, Custom, Any } //Any included for built in checks.
         public LevelType levelType;
 
-        //Type & Built-In NullCheck.
-        private CustomLevelData customLevelData;
-        public CustomLevelData CustomLevel
+        public ExtendedLevel(SelectableLevel newSelectableLevel, LevelType newLevelType, bool generateTerminalAssets, string newSourceName = "Lethal Company")
         {
-            get
-            {
-                if (levelType == LevelType.Custom && customLevelData != null)
-                    return (customLevelData);
-                else
-                    return (null);
-            }
-        }
-
-
-        //For Vanilla Moons
-        public ExtendedLevel(SelectableLevel newSelectableLevel)
-        {
-            levelType = LevelType.Vanilla;
-            selectableLevel = newSelectableLevel;
-
-            Levels.AddSelectableLevel(this);
-        }
-
-
-        //For Custom Moons
-        public ExtendedLevel(SelectableLevel newSelectableLevel, CustomLevelData newCustomLevelData, string newSourceName)
-        {
-            levelType = LevelType.Custom;
+            levelType = newLevelType;
             selectableLevel = newSelectableLevel;
             sourceName = newSourceName;
 
-            newSelectableLevel.levelID = 9 + Levels.customLevelsList.Count; //Hardcoded Vanilla level length + how many custom moons are already loaded. If I can refine order of execution we can remove the hardcoded value here
-            newSelectableLevel.sceneName = "InitSceneLaunchOptions"; //This is the scene we inject our custom moon into.
+            if (newLevelType == LevelType.Custom)
+            {
+                selectableLevel.levelID = 9 + Levels.customLevelsList.Count;
+                selectableLevel.sceneName = "InitSceneLaunchOptions";
+            }
 
-            customLevelData = newCustomLevelData;
-            customLevelData.levelRouteNode.displayPlanetInfo = newSelectableLevel.levelID;
-            customLevelData.levelRouteConfirmNode.buyRerouteToMoon = newSelectableLevel.levelID;
-
-            //TerminalUtils.AddTerminalKeyword(customLevelData.levelKeyword);
-            //TerminalUtils.AddRouteNode(customLevelData.levelKeyword, customLevelData.levelRouteNode);
+            if (generateTerminalAssets == true)
+                TerminalUtils.CreateLevelTerminalData(this);
 
             Levels.AddSelectableLevel(this);
         }
