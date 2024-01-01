@@ -1,4 +1,5 @@
-﻿using LethalLib.Modules;
+﻿using HarmonyLib;
+using LethalLib.Modules;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -29,6 +30,7 @@ namespace LethalLib.Extras
 
             logString += "SpecialKeywordResult: " + terminalKeyword.specialKeywordResult + "\n";
             logString += "AccessTerminalObjects?: " + terminalKeyword.accessTerminalObjects + "\n";
+            logString += "DefaultVerb: " + terminalKeyword.defaultVerb.name + "\n";
 
             Log(logString + "\n" + "\n");
         }
@@ -76,7 +78,7 @@ namespace LethalLib.Extras
             string logString = "All Levels List: " + "\n" + "\n";
 
             foreach (ExtendedLevel extendedLevel in Levels.allLevelsList)
-                logString += extendedLevel.SelectableLevel.PlanetName + " (" + extendedLevel.SelectableLevel.levelID + ") " + "\n";
+                logString += extendedLevel.selectableLevel.PlanetName + " (" + extendedLevel.selectableLevel.levelID + ") " + "\n";
 
             Log(logString + "\n");
         }
@@ -86,7 +88,7 @@ namespace LethalLib.Extras
             string logString = "Vanilla Levels List: " + "\n" + "\n";
 
             foreach (ExtendedLevel extendedLevel in Levels.vanillaLevelsList)
-                logString += extendedLevel.SelectableLevel.PlanetName + " (" + extendedLevel.SelectableLevel.levelID + ") " + "\n";
+                logString += extendedLevel.selectableLevel.PlanetName + " (" + extendedLevel.selectableLevel.levelID + ") " + "\n";
 
             Log(logString + "\n");
         }
@@ -96,7 +98,45 @@ namespace LethalLib.Extras
             string logString = "Custom Levels List: " + "\n" + "\n";
 
             foreach (ExtendedLevel extendedLevel in Levels.customLevelsList)
-                logString += extendedLevel.SelectableLevel.PlanetName + " (" + extendedLevel.SelectableLevel.levelID + ") " + "\n";
+                logString += extendedLevel.selectableLevel.PlanetName + " (" + extendedLevel.selectableLevel.levelID + ") " + "\n";
+
+            Log(logString + "\n");
+        }
+
+        public static void DebugScrapedVanillaContent()
+        {
+            Log("Obtained (" + ContentExtractor.vanillaItemsList.Count + " / 68) Vanilla Item References");
+
+            Log("Obtained (" + ContentExtractor.vanillaEnemiesList.Count + " / 20) Vanilla Enemy References");
+
+            Log("Obtained (" + ContentExtractor.vanillaSpawnableOutsideMapObjectsList.Count + " / 11) Vanilla Outside Object References");
+
+            Log("Obtained (" + ContentExtractor.vanillaSpawnableInsideMapObjectsList.Count + " / 2) Vanilla Inside Object References");
+
+
+            Log("Obtained (" + ContentExtractor.vanillaAmbienceLibrariesList.Count + " / 3) Vanilla Ambience Library References");
+        }
+
+
+        public static void DebugSelectableLevelReferences(ExtendedLevel extendedLevel)
+        {
+            string logString = "Logging SelectableLevel References For Moon: " + extendedLevel.NumberlessPlanetName + " (" + extendedLevel.levelType.ToString() + ")." + "\n";
+
+            logString += "Inside Enemies" + "\n" + "\n";
+
+            foreach (SpawnableEnemyWithRarity spawnableEnemy in extendedLevel.selectableLevel.Enemies)
+                logString += "Enemy Type: " + spawnableEnemy.enemyType.enemyName + " , Rarity: " + spawnableEnemy.rarity + " , Prefab Status: " + (spawnableEnemy.enemyType.enemyPrefab != null) + "\n";
+
+            logString += "Outside Enemies (Nighttime)" + "\n" + "\n";
+
+            foreach (SpawnableEnemyWithRarity spawnableEnemy in extendedLevel.selectableLevel.OutsideEnemies)
+                logString += "Enemy Type: " + spawnableEnemy.enemyType.enemyName + " , Rarity: " + spawnableEnemy.rarity + " , Prefab Status: " + (spawnableEnemy.enemyType.enemyPrefab != null) + "\n";
+
+            logString += "Outside Enemies (daytime)" + "\n" + "\n";
+
+            foreach (SpawnableEnemyWithRarity spawnableEnemy in extendedLevel.selectableLevel.DaytimeEnemies)
+                logString += "Enemy Type: " + spawnableEnemy.enemyType.enemyName + " , Rarity: " + spawnableEnemy.rarity + " , Prefab Status: " + (spawnableEnemy.enemyType.enemyPrefab != null) + "\n";
+
 
             Log(logString + "\n");
         }

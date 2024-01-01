@@ -1,4 +1,5 @@
 ﻿using HarmonyLib;
+using LethalLib.Extras;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -36,9 +37,6 @@ namespace LethalLib.Modules
             levelInfoNode = newInfoNode;
             levelKeyword = newTerminalKeyword;
             levelKeyword.defaultVerb = TerminalUtils.RouteKeyword;
-
-    
-            //TerminalUtils.AddRouteNode(levelRouteNode);
         }
 
         public static void AddObjectToDestroyList(string NewObjectName)
@@ -56,15 +54,15 @@ namespace LethalLib.Modules
 
     public class ExtendedLevel
     {
-        public SelectableLevel SelectableLevel;
+        public SelectableLevel selectableLevel;
 
         public string sourceName = "Lethal Company"; //Levels from AssetBundles will have this as their Assembly Name.
         public string NumberlessPlanetName
         {
             get
             {
-                if (SelectableLevel != null)
-                    return new string(SelectableLevel.PlanetName.SkipWhile(c => !char.IsLetter(c)).ToArray());
+                if (selectableLevel != null)
+                    return new string(selectableLevel.PlanetName.SkipWhile(c => !char.IsLetter(c)).ToArray());
                 else
                     return null;
             }
@@ -86,43 +84,35 @@ namespace LethalLib.Modules
             }
         }
 
-        public ExtendedLevel(SelectableLevel newSelectableLevel, string newSourceName = default, CustomLevelData newCustomLevelData = null)
+
+        //For Vanilla Moons
+        public ExtendedLevel(SelectableLevel newSelectableLevel)
         {
-            if (newCustomLevelData == null)
-                levelType = LevelType.Vanilla;
-            else
-            {
-                levelType = LevelType.Custom;
-
-                if (newSourceName != string.Empty)
-                    sourceName = newSourceName;
-
-                newSelectableLevel.levelID = 9 + Levels.customLevelsList.Count; //Hardcoded Vanilla level length + how many custom moons are already loaded. If I can refine order of execution we can remove the hardcoded value here
-                newSelectableLevel.sceneName = "InitSceneLaunchOptions"; //This is the scene we inject our custom moon into.
-
-                customLevelData = newCustomLevelData;
-                customLevelData.levelRouteNode.displayPlanetInfo = newSelectableLevel.levelID;
-                customLevelData.levelRouteConfirmNode.buyRerouteToMoon = newSelectableLevel.levelID;
-
-                TerminalUtils.AddTerminalKeyword(customLevelData.levelKeyword);
-                TerminalUtils.AddRouteNode(customLevelData.levelKeyword, customLevelData.levelRouteNode);
-
-
-                ///These Will Not Stay
-                ///
-            }
-
-            SelectableLevel = newSelectableLevel;
-
-
-            Debug.Log("LethalLib (Batby): New CustomLevel Created Is " + SelectableLevel.PlanetName + " (" + SelectableLevel.levelID + ") " + " , Adding To List!");
+            levelType = LevelType.Vanilla;
+            selectableLevel = newSelectableLevel;
 
             Levels.AddSelectableLevel(this);
         }
 
-        public void CreateCustomLevelData(GameObject newLevelPrefab, TerminalNode newRouteNode, TerminalNode newRouteInfoNode, TerminalNode newInfoNode, TerminalKeyword newTerminalKeyword)
+
+        //For Custom Moons
+        public ExtendedLevel(SelectableLevel newSelectableLevel, CustomLevelData newCustomLevelData, string newSourceName)
         {
-            customLevelData = new CustomLevelData(newLevelPrefab, newRouteNode, newRouteInfoNode, newInfoNode, newTerminalKeyword);
+            levelType = LevelType.Custom;
+            selectableLevel = newSelectableLevel;
+            sourceName = newSourceName;
+
+            newSelectableLevel.levelID = 9 + Levels.customLevelsList.Count; //Hardcoded Vanilla level length + how many custom moons are already loaded. If I can refine order of execution we can remove the hardcoded value here
+            newSelectableLevel.sceneName = "InitSceneLaunchOptions"; //This is the scene we inject our custom moon into.
+
+            customLevelData = newCustomLevelData;
+            customLevelData.levelRouteNode.displayPlanetInfo = newSelectableLevel.levelID;
+            customLevelData.levelRouteConfirmNode.buyRerouteToMoon = newSelectableLevel.levelID;
+
+            //TerminalUtils.AddTerminalKeyword(customLevelData.levelKeyword);
+            //TerminalUtils.AddRouteNode(customLevelData.levelKeyword, customLevelData.levelRouteNode);
+
+            Levels.AddSelectableLevel(this);
         }
     }
 }

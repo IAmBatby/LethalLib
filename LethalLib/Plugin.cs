@@ -1,6 +1,7 @@
 ﻿using BepInEx;
 using GameNetcodeStuff;
 using HarmonyLib;
+using LethalLib.Extras;
 using LethalLib.Modules;
 using MonoMod.Cil;
 using MonoMod.RuntimeDetour;
@@ -33,19 +34,29 @@ namespace LethalLib
             logger = Logger;
 
             Logger.LogInfo($"LethalLib loaded!!");
-
             new ILHook(typeof(StackTrace).GetMethod("AddFrames", BindingFlags.Instance | BindingFlags.NonPublic), IlHook);
-            AssetBundleLoader.Init();
+
+
+            Harmony.PatchAll(typeof(DebugHelper));
+            Harmony.PatchAll(typeof(DebugOrderOfExecution));
+
+            Harmony.PatchAll(typeof(ContentExtractor));
+
+            Harmony.PatchAll(typeof(AssetBundleLoader));
             Enemies.Init();
-            //Items.Init();
-            //Unlockables.Init();
-            MapObjects.Init();  
+
+            Items.Init();
+            Unlockables.Init();
+            MapObjects.Init();
+
             Dungeon.Init();
             Weathers.Init();
             LethalLib.Modules.NetworkPrefabs.Init();
+
             Harmony.PatchAll(typeof(Levels));
             Harmony.PatchAll(typeof(TerminalUtils));
-            Harmony.PatchAll(typeof(LoadCustomMoon));
+            Harmony.PatchAll(typeof(LevelLoader));
+
            
         }
 

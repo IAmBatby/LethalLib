@@ -12,21 +12,21 @@ using System.Reflection;
 using HarmonyLib;
 using UnityEngine;
 using BepInEx.Bootstrap;
-//using static LethalLib.Modules.Items;
+using static LethalLib.Modules.Items;
 using System.Collections;
 using System.Reflection.Emit;
 using UnityEngine.InputSystem;
 using Object = UnityEngine.Object;
 
-/*namespace LethalLib.Modules
+namespace LethalLib.Modules
 {
     public class Items
     {
         public static void Init()
         {
-            //On.StartOfRound.Awake += StartOfRound_Awake;
-            //On.StartOfRound.Start += StartOfRound_Start;
-            //On.Terminal.Awake += Terminal_Awake;
+            On.StartOfRound.Awake += StartOfRound_Awake;
+            On.StartOfRound.Start += StartOfRound_Start;
+            On.Terminal.Awake += Terminal_Awake;
         }
 
         public struct ItemSaveOrderData
@@ -63,11 +63,11 @@ using Object = UnityEngine.Object;
 
 
             // load itemlist from es3
-            //if (ES3.KeyExists("LethalLibAllItemsList", GameNetworkManager.Instance.currentSaveFileName))
-            //{
-                // load itemsList
-                //itemList = ES3.Load<List<ItemSaveOrderData>>("LethalLibAllItemsList", GameNetworkManager.Instance.currentSaveFileName);
-            //}
+            if (ES3.KeyExists("LethalLibAllItemsList", GameNetworkManager.Instance.currentSaveFileName))
+            {
+                 //load itemsList
+                itemList = ES3.Load<List<ItemSaveOrderData>>("LethalLibAllItemsList", GameNetworkManager.Instance.currentSaveFileName);
+            }
 
             // sort so that items are in the same order as they were when the game was saved
             // if item is not in list, add it at the end
@@ -101,7 +101,7 @@ using Object = UnityEngine.Object;
             StartOfRound.Instance.allItemsList.itemsList = newList;
 
             // save itemlist to es3
-            //ES3.Save<List<ItemSaveOrderData>>("LethalLibAllItemsList", itemList, GameNetworkManager.Instance.currentSaveFileName);
+            ES3.Save<List<ItemSaveOrderData>>("LethalLibAllItemsList", itemList, GameNetworkManager.Instance.currentSaveFileName);
    
             // loop and print
             for (int i = 0; i < StartOfRound.Instance.allItemsList.itemsList.Count; i++)
@@ -196,10 +196,10 @@ using Object = UnityEngine.Object;
 
                 var keyword = TerminalUtils.CreateTerminalKeyword(itemName.ToLowerInvariant().Replace(" ", "-"), defaultVerb: buyKeyword);
 
-                //self.terminalNodes.allKeywords.AddItem(keyword);
+                self.terminalNodes.allKeywords.AddItem(keyword);
                 var allKeywords = self.terminalNodes.allKeywords.ToList();
                 allKeywords.Add(keyword);
-                //self.terminalNodes.allKeywords = allKeywords.ToArray();
+                self.terminalNodes.allKeywords = allKeywords.ToArray();
 
                 var nouns = buyKeyword.compatibleNouns.ToList();
                 nouns.Add(new CompatibleNoun()
@@ -220,7 +220,7 @@ using Object = UnityEngine.Object;
                     itemInfo.maxCharactersToType = 25;
                 }
 
-                //self.terminalNodes.allKeywords = allKeywords.ToArray();
+                self.terminalNodes.allKeywords = allKeywords.ToArray();
 
                 var itemInfoNouns = infoKeyword.compatibleNouns.ToList();
                 itemInfoNouns.Add(new CompatibleNoun()
@@ -290,7 +290,7 @@ using Object = UnityEngine.Object;
                 }
             }
 
-           // self.allItemsList.itemsList.RemoveAll(x => LethalLibItemList.Contains(x));
+           self.allItemsList.itemsList.RemoveAll(x => LethalLibItemList.Contains(x));
 
             foreach (ScrapItem scrapItem in scrapItems)
             {
@@ -581,6 +581,5 @@ using Object = UnityEngine.Object;
                 }
             }
         }
-
     }
-}*/
+}

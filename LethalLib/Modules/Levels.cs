@@ -27,10 +27,23 @@ namespace LethalLib.Modules
         public static List<ExtendedLevel> vanillaLevelsList = new List<ExtendedLevel>();
         public static List<ExtendedLevel> customLevelsList = new List<ExtendedLevel>();
 
+        public static List<SelectableLevel> AllSelectableLevelsList
+        {
+            get
+            {
+                List<SelectableLevel> returnList = new List<SelectableLevel>();
+                foreach (ExtendedLevel extendedLevel in allLevelsList)
+                    returnList.Add(extendedLevel.selectableLevel);
+                return (returnList);
+            }
+        }
+
+        public static int timeofdaycount = 0;
+
 
         [HarmonyPatch(typeof(StartOfRound), "ChangeLevel")]
         [HarmonyPrefix]
-        public static void ChangeLevel(int levelID)
+        public static void ChangeLevel_Prefix(int levelID)
         {
             if (levelID >= 9)
                 levelID = 0;
@@ -39,7 +52,7 @@ namespace LethalLib.Modules
         [HarmonyPatch(typeof(StartOfRound), "Awake")]
         [HarmonyPrefix]
         [HarmonyPriority(0)]
-        public static void InitializeLevelData(StartOfRound __instance)
+        public static void Awake_Prefix(StartOfRound __instance)
         {
             StartOfRound startOfRound = __instance; //Redeclared for more readable variable name
 
@@ -68,25 +81,22 @@ namespace LethalLib.Modules
 
             allLevelsList.Add(extendedLevel);
 
-            RefreshOriginalLevelList();
+            //PatchVanillaLevelLists();
         }
 
-        public static void RefreshOriginalLevelList()
+        public static void PatchVanillaLevelLists()
         {
-            DebugHelper.Log("Refreshing Original Level List!");
+            DebugHelper.Log("Patching Vanilla Level List!");
 
             if (StartOfRound.Instance != null && TerminalUtils.Terminal != null)
             {
                 List<SelectableLevel> allSelectableLevels = new List<SelectableLevel>();
 
                 foreach (ExtendedLevel extendedLevel in allLevelsList)
-                    allSelectableLevels.Add(extendedLevel.SelectableLevel);
+                    allSelectableLevels.Add(extendedLevel.selectableLevel);
 
                 StartOfRound.Instance.levels = allSelectableLevels.ToArray();
                 TerminalUtils.Terminal.moonsCatalogueList = allSelectableLevels.ToArray();
-
-                DebugHelper.DebugAllLevels();
-                DebugHelper.DebugInjectedLevels();
 
                 foreach (ExtendedLevel extendedLevel in customLevelsList)
                     PatchCustomLevel(extendedLevel);
@@ -96,43 +106,76 @@ namespace LethalLib.Modules
         //This is a janky function to pull some data from a vanilla level (Dine). Because Unity -> LethalLib scriptableobject references aren't implemented correctly.
         public static void PatchCustomLevel(ExtendedLevel extendedLevel)
         {
-            DebugHelper.Log("Patching Custom Level: " + extendedLevel.SelectableLevel.PlanetName);
-            extendedLevel.SelectableLevel.spawnableScrap = vanillaLevelsList[6].SelectableLevel.spawnableScrap;
-            extendedLevel.SelectableLevel.spawnableOutsideObjects = vanillaLevelsList[6].SelectableLevel.spawnableOutsideObjects;
-            extendedLevel.SelectableLevel.spawnableMapObjects = vanillaLevelsList[6].SelectableLevel.spawnableMapObjects;
-            extendedLevel.SelectableLevel.Enemies = vanillaLevelsList[6].SelectableLevel.Enemies;
-            extendedLevel.SelectableLevel.OutsideEnemies = vanillaLevelsList[6].SelectableLevel.OutsideEnemies;
-            extendedLevel.SelectableLevel.DaytimeEnemies = vanillaLevelsList[6].SelectableLevel.DaytimeEnemies;
+            //extendedLevel.selectableLevel.spawnableScrap = vanillaLevelsList[6].selectableLevel.spawnableScrap;
+            //extendedLevel.selectableLevel.spawnableOutsideObjects = vanillaLevelsList[6].selectableLevel.spawnableOutsideObjects;
+            //extendedLevel.selectableLevel.spawnableMapObjects = vanillaLevelsList[6].selectableLevel.spawnableMapObjects;
+            //extendedLevel.selectableLevel.Enemies = vanillaLevelsList[6].selectableLevel.Enemies;
+            //extendedLevel.selectableLevel.OutsideEnemies = vanillaLevelsList[6].selectableLevel.OutsideEnemies;
+            //extendedLevel.selectableLevel.DaytimeEnemies = vanillaLevelsList[6].selectableLevel.DaytimeEnemies;
         }
 
-        public static bool TryGetExtendedLevel(SelectableLevel selectableLevel, out ExtendedLevel returnExtendedLevel)
+
+        [HarmonyPatch(typeof(TimeOfDay), "Awake")]
+        [HarmonyPrefix]
+        public static void Awake_Prefix(TimeOfDay __instance)
+        {
+            DebugHelper.Log("TimeOfDay Spawning!");
+            timeofdaycount++;
+
+            if (__instance.currentLevel != null)
+                DebugHelper.Log("CurrentLevel Is: " + __instance.currentLevel.PlanetName);
+        }
+
+        public static bool fakeTimeStartedThisFrame = false;
+        public static SelectableLevel cachedTimeOfDayLevel = null;
+
+        [HarmonyPatch(typeof(TimeOfDay), "Update")]
+        [HarmonyPrefix]
+        public static void Update_Prefix(TimeOfDay __instance)
+        {
+            if (__instance.currentLevel != null)
+            {
+                if (cachedTimeOfDayLevel == null)
+                {
+                    cachedTimeOfDayLevel = __instance.currentLevel;
+                    DebugHelper.Log("TimeOfDay CurrentLevel Changed From (Null) To " + __instance.currentLevel.PlanetName);
+                }
+                else if (cachedTimeOfDayLevel != __instance.currentLevel)
+                {
+                    cachedTimeOfDayLevel = __instance.currentLevel;
+                    DebugHelper.Log("TimeOfDay CurrentLevel Changed From " + cachedTimeOfDayLevel.PlanetName + " To " + __instance.currentLevel.PlanetName);
+                }
+            }
+
+
+            if (fakeTimeStartedThisFrame == false)
+            {
+                DebugHelper.Log("Time Started This Frame!");
+                fakeTimeStartedThisFrame = true;
+            }
+        }
+
+        public static bool TryGetExtendedLevel(SelectableLevel selectableLevel, out ExtendedLevel returnExtendedLevel, ExtendedLevel.LevelType levelType = ExtendedLevel.LevelType.Any)
         {
             returnExtendedLevel = null;
+            List<ExtendedLevel> extendedLevelsList = new List<ExtendedLevel>();
 
-            foreach (ExtendedLevel extendedLevel in allLevelsList)
-                if (extendedLevel.SelectableLevel == selectableLevel)
+            switch (levelType)
+            {
+                case ExtendedLevel.LevelType.Vanilla:
+                    extendedLevelsList = vanillaLevelsList;
+                    break;
+                case ExtendedLevel.LevelType.Custom:
+                    extendedLevelsList = customLevelsList;
+                    break;
+                case ExtendedLevel.LevelType.Any:
+                    extendedLevelsList = allLevelsList;
+                    break;
+            }
+
+            foreach (ExtendedLevel extendedLevel in extendedLevelsList)
+                if (extendedLevel.selectableLevel == selectableLevel)
                     returnExtendedLevel = extendedLevel;
-
-            return (returnExtendedLevel != null);
-        }
-
-        public static bool TryGetExtendedLevel(SelectableLevel selectableLevel, out ExtendedLevel returnExtendedLevel, ExtendedLevel.LevelType levelType)
-        {
-            returnExtendedLevel = null;
-
-            if (levelType == ExtendedLevel.LevelType.Vanilla)
-            {
-                foreach (ExtendedLevel extendedLevel in vanillaLevelsList)
-                    if (extendedLevel.SelectableLevel == selectableLevel)
-                        returnExtendedLevel = extendedLevel;
-            }
-
-            else if (levelType == ExtendedLevel.LevelType.Custom)
-            {
-                foreach (ExtendedLevel extendedLevel in customLevelsList)
-                    if (extendedLevel.SelectableLevel == selectableLevel)
-                        returnExtendedLevel = extendedLevel;
-            }
 
             return (returnExtendedLevel != null);
         }
