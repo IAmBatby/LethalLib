@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
+using UnityEngine.Audio;
 
 namespace LethalLib.Extras
 {
@@ -115,6 +116,16 @@ namespace LethalLib.Extras
 
 
             Log("Obtained (" + ContentExtractor.vanillaAmbienceLibrariesList.Count + " / 3) Vanilla Ambience Library References");
+
+            Log("Obtained (" + ContentExtractor.vanillaAudioMixerGroupsList.Count + " / 00) Vanilla Audio Mixing Group References");
+
+            foreach (AudioMixerGroup audioMix in ContentExtractor.vanillaAudioMixerGroupsList)
+                Log("AudioMixerGroup Name: " + audioMix.name);
+        }
+
+        public static void DebugAudioMixerGroups()
+        {
+
         }
 
 

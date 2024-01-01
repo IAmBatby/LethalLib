@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
+using UnityEngine.Audio;
 
 namespace LethalLib.Modules
 {
@@ -14,6 +15,7 @@ namespace LethalLib.Modules
         public static List<SpawnableOutsideObject> vanillaSpawnableOutsideMapObjectsList = new List<SpawnableOutsideObject>();
         public static List<GameObject> vanillaSpawnableInsideMapObjectsList = new List<GameObject>();
         public static List<LevelAmbienceLibrary> vanillaAmbienceLibrariesList = new List<LevelAmbienceLibrary>();
+        public static List<AudioMixerGroup> vanillaAudioMixerGroupsList = new List<AudioMixerGroup>();
 
 
         [HarmonyPatch(typeof(StartOfRound), "Awake")]
@@ -24,8 +26,13 @@ namespace LethalLib.Modules
             if (startOfRound != null)
             {
                 foreach (Item item in startOfRound.allItemsList.itemsList)
+                {
                     if (!vanillaItemsList.Contains(item))
                         vanillaItemsList.Add(item);
+
+                    if (item.spawnPrefab != null)
+                        TryExtractAudioMixerGroups(item.spawnPrefab.GetComponentsInChildren<AudioSource>());
+                }
 
                 foreach (SelectableLevel selectableLevel in startOfRound.levels)
                 {
@@ -56,6 +63,16 @@ namespace LethalLib.Modules
             }
 
             DebugHelper.DebugScrapedVanillaContent();
+        }
+
+        public static void TryExtractAudioMixerGroups(AudioSource[] audioSources)
+        {
+            foreach (AudioSource audioSource in audioSources)
+                if (audioSource.outputAudioMixerGroup != null && !vanillaAudioMixerGroupsList.Contains(audioSource.outputAudioMixerGroup))
+                {
+                    vanillaAudioMixerGroupsList.Add(audioSource.outputAudioMixerGroup);
+                    DebugHelper.Log("Adding AudioMixerGroup: " + audioSource.outputAudioMixerGroup.name + " To Vanilla Reference List!");
+                }
         }
     }
 }

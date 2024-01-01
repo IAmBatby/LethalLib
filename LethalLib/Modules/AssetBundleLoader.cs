@@ -69,7 +69,20 @@ namespace LethalLib.Modules
 
         public static void RestoreVanillaAssetReferences(SelectableLevel selectableLevel)
         {
-            
+
+            AudioSource[] moonAudioSources = selectableLevel.planetPrefab.GetComponentsInChildren<AudioSource>();
+
+            DebugHelper.Log("Found " + moonAudioSources.Length + " AudioSources In Custom Moon: " + selectableLevel.PlanetName);
+
+            foreach (AudioSource audioSource in moonAudioSources)
+            {
+                if (audioSource.outputAudioMixerGroup == null)
+                {
+                    audioSource.outputAudioMixerGroup = ContentExtractor.vanillaAudioMixerGroupsList[0];
+                    DebugHelper.Log("AudioGroupMixer Reference Inside " + audioSource.name + " Was Null, Assigning Master SFX Mixer For Safety!");
+                }
+            }
+
             foreach (SpawnableItemWithRarity spawnableItem in selectableLevel.spawnableScrap)
                 foreach (Item vanillaItem in ContentExtractor.vanillaItemsList)
                     if (spawnableItem.spawnableItem.itemName == vanillaItem.itemName)
@@ -77,31 +90,31 @@ namespace LethalLib.Modules
 
             foreach (SpawnableEnemyWithRarity spawnableEnemy in selectableLevel.Enemies)
                 foreach (EnemyType vanillaEnemy in ContentExtractor.vanillaEnemiesList)
-                    if (spawnableEnemy.enemyType.enemyName == vanillaEnemy.enemyName)
+                    if (spawnableEnemy.enemyType != null && spawnableEnemy.enemyType.enemyName == vanillaEnemy.enemyName)
                         spawnableEnemy.enemyType = vanillaEnemy;
 
             foreach (SpawnableEnemyWithRarity enemyType in selectableLevel.OutsideEnemies)
                 foreach (EnemyType vanillaEnemyType in ContentExtractor.vanillaEnemiesList)
-                    if (enemyType.enemyType.enemyName == vanillaEnemyType.enemyName)
+                    if (enemyType.enemyType != null && enemyType.enemyType.enemyName == vanillaEnemyType.enemyName)
                         enemyType.enemyType = vanillaEnemyType;
 
             foreach (SpawnableEnemyWithRarity enemyType in selectableLevel.DaytimeEnemies)
                 foreach (EnemyType vanillaEnemyType in ContentExtractor.vanillaEnemiesList)
-                    if (enemyType.enemyType.enemyName == vanillaEnemyType.enemyName)
+                    if (enemyType.enemyType != null && enemyType.enemyType.enemyName == vanillaEnemyType.enemyName)
                         enemyType.enemyType = vanillaEnemyType;
 
             foreach (SpawnableMapObject spawnableMapObject in selectableLevel.spawnableMapObjects)
                 foreach (GameObject vanillaSpawnableMapObject in ContentExtractor.vanillaSpawnableInsideMapObjectsList)
-                    if (spawnableMapObject.prefabToSpawn.name == vanillaSpawnableMapObject.name)
+                    if (spawnableMapObject.prefabToSpawn != null && spawnableMapObject.prefabToSpawn.name == vanillaSpawnableMapObject.name)
                         spawnableMapObject.prefabToSpawn = vanillaSpawnableMapObject;
 
             foreach (SpawnableOutsideObjectWithRarity spawnableOutsideObject in selectableLevel.spawnableOutsideObjects)
                 foreach (SpawnableOutsideObject vanillaSpawnableOutsideObject in ContentExtractor.vanillaSpawnableOutsideMapObjectsList)
-                    if (spawnableOutsideObject.spawnableObject.name == vanillaSpawnableOutsideObject.name)
+                    if (spawnableOutsideObject.spawnableObject != null && spawnableOutsideObject.spawnableObject.name == vanillaSpawnableOutsideObject.name)
                         spawnableOutsideObject.spawnableObject = vanillaSpawnableOutsideObject;
 
             foreach (LevelAmbienceLibrary vanillaAmbienceLibrary in ContentExtractor.vanillaAmbienceLibrariesList)
-                if (vanillaAmbienceLibrary.name == selectableLevel.levelAmbienceClips.name)
+                if (selectableLevel.levelAmbienceClips != null && selectableLevel.levelAmbienceClips.name == vanillaAmbienceLibrary.name)
                     selectableLevel.levelAmbienceClips = vanillaAmbienceLibrary;
             
         }

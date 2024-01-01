@@ -95,6 +95,10 @@ public class LevelLoader
     [HarmonyPostfix]
     public static void SceneManager_OnLoadComplete1_PostFix()
     {
+        for (int i = 0; i < SceneManager.sceneCount; i++)
+            foreach (GameObject rootObject in SceneManager.GetSceneAt(i).GetRootGameObjects())
+                ContentExtractor.TryExtractAudioMixerGroups(rootObject.GetComponentsInChildren<AudioSource>());
+
         if (SceneManager.GetSceneByName("SampleSceneRelay") != null)
             PreloadTerrainShader();
         if (SceneManager.GetSceneByName("MainMenu") != null) //IsInGame check to stop us from trying to inject before the intended InitSceneLaunchOptions usage.
