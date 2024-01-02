@@ -38,17 +38,17 @@ namespace LethalLib.Modules
             }
         }
 
-        public static int timeofdaycount = 0;
 
 
         [HarmonyPatch(typeof(StartOfRound), "ChangeLevel")]
         [HarmonyPrefix]
-        public static void ChangeLevel_Prefix(int levelID)
+        public static void ChangeLevel_Prefix(int levelID) //Gotta look into this properlly
         {
             if (levelID >= 9)
                 levelID = 0;
         }
 
+        //This stuff is a little gross idk.
         [HarmonyPatch(typeof(StartOfRound), "Awake")]
         [HarmonyPrefix]
         [HarmonyPriority(0)]
@@ -80,8 +80,6 @@ namespace LethalLib.Modules
                 vanillaLevelsList.Add(extendedLevel);
 
             allLevelsList.Add(extendedLevel);
-
-            //PatchVanillaLevelLists();
         }
 
         public static void PatchVanillaLevelLists()
@@ -97,61 +95,6 @@ namespace LethalLib.Modules
 
                 StartOfRound.Instance.levels = allSelectableLevels.ToArray();
                 TerminalUtils.Terminal.moonsCatalogueList = allSelectableLevels.ToArray();
-
-                foreach (ExtendedLevel extendedLevel in customLevelsList)
-                    PatchCustomLevel(extendedLevel);
-            }
-        }
-
-        //This is a janky function to pull some data from a vanilla level (Dine). Because Unity -> LethalLib scriptableobject references aren't implemented correctly.
-        public static void PatchCustomLevel(ExtendedLevel extendedLevel)
-        {
-            //extendedLevel.selectableLevel.spawnableScrap = vanillaLevelsList[6].selectableLevel.spawnableScrap;
-            //extendedLevel.selectableLevel.spawnableOutsideObjects = vanillaLevelsList[6].selectableLevel.spawnableOutsideObjects;
-            //extendedLevel.selectableLevel.spawnableMapObjects = vanillaLevelsList[6].selectableLevel.spawnableMapObjects;
-            //extendedLevel.selectableLevel.Enemies = vanillaLevelsList[6].selectableLevel.Enemies;
-            //extendedLevel.selectableLevel.OutsideEnemies = vanillaLevelsList[6].selectableLevel.OutsideEnemies;
-            //extendedLevel.selectableLevel.DaytimeEnemies = vanillaLevelsList[6].selectableLevel.DaytimeEnemies;
-        }
-
-
-        [HarmonyPatch(typeof(TimeOfDay), "Awake")]
-        [HarmonyPrefix]
-        public static void Awake_Prefix(TimeOfDay __instance)
-        {
-            DebugHelper.Log("TimeOfDay Spawning!");
-            timeofdaycount++;
-
-            if (__instance.currentLevel != null)
-                DebugHelper.Log("CurrentLevel Is: " + __instance.currentLevel.PlanetName);
-        }
-
-        public static bool fakeTimeStartedThisFrame = false;
-        public static SelectableLevel cachedTimeOfDayLevel = null;
-
-        [HarmonyPatch(typeof(TimeOfDay), "Update")]
-        [HarmonyPrefix]
-        public static void Update_Prefix(TimeOfDay __instance)
-        {
-            if (__instance.currentLevel != null)
-            {
-                if (cachedTimeOfDayLevel == null)
-                {
-                    cachedTimeOfDayLevel = __instance.currentLevel;
-                    DebugHelper.Log("TimeOfDay CurrentLevel Changed From (Null) To " + __instance.currentLevel.PlanetName);
-                }
-                else if (cachedTimeOfDayLevel != __instance.currentLevel)
-                {
-                    cachedTimeOfDayLevel = __instance.currentLevel;
-                    DebugHelper.Log("TimeOfDay CurrentLevel Changed From " + cachedTimeOfDayLevel.PlanetName + " To " + __instance.currentLevel.PlanetName);
-                }
-            }
-
-
-            if (fakeTimeStartedThisFrame == false)
-            {
-                DebugHelper.Log("Time Started This Frame!");
-                fakeTimeStartedThisFrame = true;
             }
         }
 
@@ -179,5 +122,77 @@ namespace LethalLib.Modules
 
             return (returnExtendedLevel != null);
         }
+
+        //Item Dropship Debugging
+
+        public static bool updatecheck;
+        [HarmonyPatch(typeof(StartOfRound), "Update")]
+        [HarmonyPostfix]
+        public static void StartOfRoundUpdate(StartOfRound __instance)
+        {
+            if (updatecheck == false && __instance.shipHasLanded == true)
+            {
+                DebugHelper.Log("StartOfRound - Ship Has Landed!");
+                updatecheck = true;
+            }
+        }
+
+        [HarmonyPatch(typeof(ItemDropship), "Update")]
+        [HarmonyPrefix]
+        public static void ItemDropship_Prefix(ItemDropship __instance)
+        {
+            //DebugItemDropship(__instance);
+        }
+
+        [HarmonyPatch(typeof(ItemDropship), "Update")]
+        [HarmonyPostfix]
+        public static void ItemDropship_Postfix(ItemDropship __instance)
+        {
+            DebugItemDropship(__instance);
+        }
+
+        public static string previousShipCheck;
+        public static int previousShipTimerCheck = -1;
+
+        public static void DebugItemDropship(ItemDropship __instance)
+        {
+            string debugString = "Is Item Dropship Delivering?: " + __instance.deliveringOrder + "\n";
+            debugString += "Is Server?: " + __instance.IsServer + "\n";
+            debugString += "Is Owned By Server?: " + __instance.IsOwnedByServer + "\n";
+            debugString += "Terminal Ordred Items Count: " + __instance.terminalScript.orderedItemsFromTerminal.Count + "\n";
+            debugString += "Is This The Players First Order?: " + __instance.playersFirstOrder.ToString() + "\n";
+            debugString += "Has The Ship Landed?: " + __instance.playersManager.shipHasLanded.ToString() + "\n";
+            debugString += "Ship Timer Is Currently: " + __instance.shipTimer.ToString() + "\n";
+
+            if (debugString != previousShipCheck && ((int)__instance.shipTimer !=  previousShipTimerCheck))
+            {
+                DebugHelper.Log(debugString + "\n");
+                previousShipCheck = debugString;
+                previousShipTimerCheck = (int)__instance.shipTimer;
+            }
+        }
+
+        [HarmonyPatch(typeof(ItemDropship), "Start")]
+        [HarmonyPostfix]
+        public static void ItemDropship_PostFix1(ItemDropship __instance)
+        {
+            DebugHelper.Log("Item Dropship Start() Successfully Ran!" + "\n" +
+            "StartOfRound Reference Is: " + __instance.playersManager.ToString() + ". Terminal Reference Is: " + __instance.terminalScript.ToString());
+        }
+
+        [HarmonyPatch(typeof(ItemDropship), "LandShipOnServer")]
+        [HarmonyPostfix]
+        public static void ItemDropship_PostFix2()
+        {
+            DebugHelper.Log("Item Dropship LandShipOnServer() Successfully Ran!");
+        }
+
+        [HarmonyPatch(typeof(ItemDropship), "LandShipClientRpc")]
+        [HarmonyPostfix]
+        public static void ItemDropship_PostFix()
+        {
+            DebugHelper.Log("Item Dropship LandShipClientRPC() Successfully Ran!");
+        }
+
     }
 }

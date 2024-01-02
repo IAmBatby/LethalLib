@@ -64,7 +64,9 @@ namespace LethalLib.Modules
 
             if (newBundle != null)
                 foreach (SelectableLevel selectableLevel in newBundle.LoadAllAssets<SelectableLevel>())
-                    new ExtendedLevel(selectableLevel, LevelType.Custom, generateTerminalAssets: true, newBundle.name);
+                    foreach (GameObject gameObject in newBundle.LoadAllAssets<GameObject>())
+                        if (gameObject.name == ExtendedLevel.GetNumberlessPlanetName(selectableLevel))
+                            new ExtendedLevel(selectableLevel, LevelType.Custom, generateTerminalAssets: true, newLevelPrefab: gameObject, newSourceName: newBundle.name);
         }
 
         public static void RestoreVanillaAssetReferences(SelectableLevel selectableLevel)

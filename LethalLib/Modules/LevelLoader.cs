@@ -11,6 +11,7 @@ using DunGen;
 using DunGen.Graph;
 using static DunGen.Graph.DungeonFlow;
 using System.Collections.Generic;
+using Unity.Netcode;
 
 //Jank hotfix to load terrain later so Unity doesn't get overwhelmed.
 public class TerrainInfo
@@ -82,15 +83,6 @@ public class LevelLoader
         }
     }
 
-    [HarmonyPatch(typeof(StartOfRound), "StartGame")]
-    [HarmonyPrefix]
-    public static void StartGame()
-    {
-        DebugHelper.Log("Starting Game Prefix!");
-        DebugHelper.Log("Current Level Is: " + StartOfRound.Instance.currentLevel.PlanetName + " (" + StartOfRound.Instance.currentLevelID + ") ");
-        DebugHelper.Log("Current Level SceneName Is: " + StartOfRound.Instance.currentLevel.sceneName);
-    }
-
     [HarmonyPatch(typeof(StartOfRound), "SceneManager_OnLoadComplete1")]
     [HarmonyPostfix]
     public static void SceneManager_OnLoadComplete1_PostFix()
@@ -120,12 +112,15 @@ public class LevelLoader
 
             if (Levels.TryGetExtendedLevel(StartOfRound.Instance.currentLevel, out ExtendedLevel extendedLevel))
             {
-                if (extendedLevel.selectableLevel.planetPrefab != null)
+                if (extendedLevel.levelPrefab != null)
                 {
-                    GameObject mainPrefab = GameObject.Instantiate(extendedLevel.selectableLevel.planetPrefab);
+                    GameObject mainPrefab = GameObject.Instantiate(extendedLevel.levelPrefab);
                     if (mainPrefab != null)
                     {
                         SceneManager.MoveGameObjectToScene(mainPrefab, scene); //We move and detatch to replicate vanilla moon scene hierarchy.
+
+                        SyncLoadedLevel(mainPrefab);
+
                         //mainPrefab.transform.DetachChildren();
                         //mainPrefab.SetActive(false);
 
@@ -139,6 +134,75 @@ public class LevelLoader
         }
     }
 
+    public class CachedChildedNetworkObjectData
+    {
+        public GameObject childObject;
+        public Transform childParentTransform;
+        public NetworkObject childParentNetwork;
+
+        public CachedChildedNetworkObjectData(GameObject newChildGameObject, Transform newIntendedParent, NetworkObject newParentNetworkObject)
+        { childObject = newChildGameObject; childParentTransform = newIntendedParent; childParentNetwork = newParentNetworkObject; }
+    }
+
+    public static void SyncLoadedLevel(GameObject levelPrefab)
+    {
+        List<CachedChildedNetworkObjectData> cachedNetworkObjectParentList = new List<CachedChildedNetworkObjectData>();
+
+        List<NetworkObject> networkObjectsList = new List<NetworkObject>(levelPrefab.GetComponentsInChildren<NetworkObject>());
+        List<NetworkBehaviour> networkBehavioursList = new List<NetworkBehaviour>(levelPrefab.GetComponentsInChildren<NetworkBehaviour>());
+
+        //Just Logging Any NetworkBehaviours Missing A NetworkObject (Usually Due To Copying From AssetRipped Scnes)
+        foreach (NetworkBehaviour networkBehaviour in networkBehavioursList)
+            if (networkBehaviour.gameObject.GetComponent<NetworkObject>() == null)
+                DebugHelper.Log("NetworkBehaviour: " + networkBehaviour.gameObject.name + " Has No NetworkObject! This Is Bad!");
+
+        //Getting every NetworkObject that is childed under another NetworkObject (Handled in two seperate steps to avoid any issues in changing the content of the loop).
+        foreach (NetworkObject networkObject in new List<NetworkObject>(networkObjectsList))
+            foreach (NetworkObject childedNetworkObject in networkObject.gameObject.GetComponentsInChildren<NetworkObject>())
+                if (childedNetworkObject != networkObject)
+                {
+                    DebugHelper.Log("NetworkObject: " + childedNetworkObject.gameObject.name + " Is Child Of Parent NetworkObject: " + networkObject.gameObject.name + ". Temporarily Unparenting!");
+                    networkObjectsList.Remove(childedNetworkObject);
+                    cachedNetworkObjectParentList.Add(new CachedChildedNetworkObjectData(childedNetworkObject.gameObject, childedNetworkObject.transform.parent, networkObject));
+                }
+
+
+
+        //Unparenting all childed NetworkObjects.
+        /*foreach (CachedChildedNetworkObjectData childNetworkObject in cachedNetworkObjectParentList)
+        {
+            DebugHelper.Log("Attempting To Unparent: " + childNetworkObject.childObject.name + " From: " + childNetworkObject.childParentTransform.name +
+                "Previous Transform World Position: " + childNetworkObject.childObject.transform.position + ". Previous Transform Local Position: " + childNetworkObject.childObject.transform.localPosition);
+            networkObjectsList.Remove(childNetworkObject.childObject.GetComponent<NetworkObject>());
+            UnityEngine.Object.DestroyImmediate(childNetworkObject.childObject.GetComponent<NetworkObject>());
+            childNetworkObject.childObject.transform.SetParent(null);
+        }*/
+
+        //"Spawning" All NetworkObjects
+        foreach (NetworkObject networkObject in networkObjectsList)
+        {
+            bool debugBool = networkObject.IsSpawned;
+            networkObject.Spawn();
+            DebugHelper.Log("Attempting To Sync NetworkObject For: " + networkObject.gameObject.name +
+                ". Previous IsSpawned Status: (" + debugBool + ") New IsSpawned Status: (" + networkObject.IsSpawned + ")");
+        }
+
+        //Re-Parenting all previously childed NetworkObjects.
+        /*foreach (CachedChildedNetworkObjectData childNetworkObject in cachedNetworkObjectParentList)
+        {
+            DebugHelper.Log("Attempting To Reparent: " + childNetworkObject.childObject.gameObject.name + " To: " + childNetworkObject.childParentTransform.name +
+                "Current Transform World Position: " + childNetworkObject.childObject.transform.position + ". Current Transform Local Position: " + childNetworkObject.childObject.transform.localPosition);
+            NetworkObject newNetworkObject = childNetworkObject.childObject.AddComponent<NetworkObject>();
+            bool debugBool = newNetworkObject.IsSpawned;
+            newNetworkObject.Spawn();
+            newNetworkObject.TrySetParent(childNetworkObject.childParentNetwork, worldPositionStays: false);
+            childNetworkObject.childObject.transform.localPosition = Vector3.zero;
+            DebugHelper.Log("Attempting To Sync NetworkObject For: " + newNetworkObject.gameObject.name +
+                ". Previous IsSpawned Status: (" + debugBool + ") New IsSpawned Status: (" + newNetworkObject.IsSpawned + ")" +
+                "New Transform World Position: " + childNetworkObject.childObject.transform.position + ". New Transform Local Position: " + childNetworkObject.childObject.transform.localPosition);
+        }*/
+    }
+
     public static List<(GlobalPropSettings, IntRange)> cachedGlobalPropList = new List<(GlobalPropSettings, IntRange)>();
 
     [HarmonyPatch(typeof(RoundManager), "GenerateNewFloor")]
@@ -148,18 +212,14 @@ public class LevelLoader
         RoundManager roundManager = __instance;
         RuntimeDungeon runtimeDungeon = UnityEngine.Object.FindObjectOfType<RuntimeDungeon>(false);
         if (Levels.TryGetExtendedLevel(StartOfRound.Instance.currentLevel, out ExtendedLevel extendedLevel))
-            if (extendedLevel.selectableLevel.planetPrefab != null)
-            {
-                EntranceTeleport[] customMoonEntrances = extendedLevel.selectableLevel.planetPrefab.GetComponentsInChildren<EntranceTeleport>();
-                if (runtimeDungeon != null && roundManager != null)
+            if (extendedLevel.levelPrefab != null && runtimeDungeon != null && roundManager != null)
                     foreach (DungeonFlow dungeonFlow in roundManager.dungeonFlowTypes)
                         foreach (GlobalPropSettings globalProp in dungeonFlow.GlobalProps)
                             if (globalProp.ID == 1231)
                             {
                                 cachedGlobalPropList.Add((globalProp, new IntRange(globalProp.Count.Min, globalProp.Count.Max)));
-                                globalProp.Count = new IntRange(customMoonEntrances.Length - 1, customMoonEntrances.Length - 1); //-1 Because that Array contains the Main Entrance which is handled by a seperate Global Prop.
+                                globalProp.Count = new IntRange(extendedLevel.fireExitsAmount, extendedLevel.fireExitsAmount);
                             }
-            }
     }
 
     [HarmonyPatch(typeof(RoundManager), "GenerateNewFloor")]
