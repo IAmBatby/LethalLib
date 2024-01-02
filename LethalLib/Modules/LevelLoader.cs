@@ -137,70 +137,28 @@ public class LevelLoader
     public class CachedChildedNetworkObjectData
     {
         public GameObject childObject;
+        public NetworkObject childNetworkObject;
         public Transform childParentTransform;
-        public NetworkObject childParentNetwork;
 
-        public CachedChildedNetworkObjectData(GameObject newChildGameObject, Transform newIntendedParent, NetworkObject newParentNetworkObject)
-        { childObject = newChildGameObject; childParentTransform = newIntendedParent; childParentNetwork = newParentNetworkObject; }
+        public CachedChildedNetworkObjectData(GameObject newChildGameObject, Transform newIntendedParent, NetworkObject newChildNetworkObject)
+        { childNetworkObject = newChildNetworkObject;  childObject = newChildGameObject; childParentTransform = newIntendedParent; }
     }
 
     public static void SyncLoadedLevel(GameObject levelPrefab)
     {
         List<CachedChildedNetworkObjectData> cachedNetworkObjectParentList = new List<CachedChildedNetworkObjectData>();
-
         List<NetworkObject> networkObjectsList = new List<NetworkObject>(levelPrefab.GetComponentsInChildren<NetworkObject>());
-        List<NetworkBehaviour> networkBehavioursList = new List<NetworkBehaviour>(levelPrefab.GetComponentsInChildren<NetworkBehaviour>());
 
-        //Just Logging Any NetworkBehaviours Missing A NetworkObject (Usually Due To Copying From AssetRipped Scnes)
-        foreach (NetworkBehaviour networkBehaviour in networkBehavioursList)
-            if (networkBehaviour.gameObject.GetComponent<NetworkObject>() == null)
-                DebugHelper.Log("NetworkBehaviour: " + networkBehaviour.gameObject.name + " Has No NetworkObject! This Is Bad!");
-
-        //Getting every NetworkObject that is childed under another NetworkObject (Handled in two seperate steps to avoid any issues in changing the content of the loop).
         foreach (NetworkObject networkObject in new List<NetworkObject>(networkObjectsList))
-            foreach (NetworkObject childedNetworkObject in networkObject.gameObject.GetComponentsInChildren<NetworkObject>())
-                if (childedNetworkObject != networkObject)
-                {
-                    DebugHelper.Log("NetworkObject: " + childedNetworkObject.gameObject.name + " Is Child Of Parent NetworkObject: " + networkObject.gameObject.name + ". Temporarily Unparenting!");
-                    networkObjectsList.Remove(childedNetworkObject);
-                    cachedNetworkObjectParentList.Add(new CachedChildedNetworkObjectData(childedNetworkObject.gameObject, childedNetworkObject.transform.parent, networkObject));
-                }
+            cachedNetworkObjectParentList.Add(new CachedChildedNetworkObjectData(networkObject.gameObject, networkObject.transform.parent, networkObject));
 
-
-
-        //Unparenting all childed NetworkObjects.
-        /*foreach (CachedChildedNetworkObjectData childNetworkObject in cachedNetworkObjectParentList)
+        foreach (CachedChildedNetworkObjectData cachedNetworkChild in cachedNetworkObjectParentList)
         {
-            DebugHelper.Log("Attempting To Unparent: " + childNetworkObject.childObject.name + " From: " + childNetworkObject.childParentTransform.name +
-                "Previous Transform World Position: " + childNetworkObject.childObject.transform.position + ". Previous Transform Local Position: " + childNetworkObject.childObject.transform.localPosition);
-            networkObjectsList.Remove(childNetworkObject.childObject.GetComponent<NetworkObject>());
-            UnityEngine.Object.DestroyImmediate(childNetworkObject.childObject.GetComponent<NetworkObject>());
-            childNetworkObject.childObject.transform.SetParent(null);
-        }*/
-
-        //"Spawning" All NetworkObjects
-        foreach (NetworkObject networkObject in networkObjectsList)
-        {
-            bool debugBool = networkObject.IsSpawned;
-            networkObject.Spawn();
-            DebugHelper.Log("Attempting To Sync NetworkObject For: " + networkObject.gameObject.name +
-                ". Previous IsSpawned Status: (" + debugBool + ") New IsSpawned Status: (" + networkObject.IsSpawned + ")");
+            DebugHelper.Log("Attempting To Parent & Spawn: " + cachedNetworkChild.childObject.name);
+            cachedNetworkChild.childObject.transform.SetParent(null);
+            cachedNetworkChild.childNetworkObject.Spawn();
+            cachedNetworkChild.childNetworkObject.TrySetParent(cachedNetworkChild.childParentTransform);
         }
-
-        //Re-Parenting all previously childed NetworkObjects.
-        /*foreach (CachedChildedNetworkObjectData childNetworkObject in cachedNetworkObjectParentList)
-        {
-            DebugHelper.Log("Attempting To Reparent: " + childNetworkObject.childObject.gameObject.name + " To: " + childNetworkObject.childParentTransform.name +
-                "Current Transform World Position: " + childNetworkObject.childObject.transform.position + ". Current Transform Local Position: " + childNetworkObject.childObject.transform.localPosition);
-            NetworkObject newNetworkObject = childNetworkObject.childObject.AddComponent<NetworkObject>();
-            bool debugBool = newNetworkObject.IsSpawned;
-            newNetworkObject.Spawn();
-            newNetworkObject.TrySetParent(childNetworkObject.childParentNetwork, worldPositionStays: false);
-            childNetworkObject.childObject.transform.localPosition = Vector3.zero;
-            DebugHelper.Log("Attempting To Sync NetworkObject For: " + newNetworkObject.gameObject.name +
-                ". Previous IsSpawned Status: (" + debugBool + ") New IsSpawned Status: (" + newNetworkObject.IsSpawned + ")" +
-                "New Transform World Position: " + childNetworkObject.childObject.transform.position + ". New Transform Local Position: " + childNetworkObject.childObject.transform.localPosition);
-        }*/
     }
 
     public static List<(GlobalPropSettings, IntRange)> cachedGlobalPropList = new List<(GlobalPropSettings, IntRange)>();
@@ -282,5 +240,4 @@ public class LevelLoader
         terrainData.SetHeights(0, 0, GenerateHeights());
         terrain.terrainData = terrainData;
     }
-
 }

@@ -52,7 +52,7 @@ namespace LethalLib.Modules
         {
             lethalLibFolder = lethalLibFile.Parent;
             pluginsFolder = lethalLibFile.Parent.Parent;
-            specifiedFileExtension = "*.lem";
+            specifiedFileExtension = "*.lethalbundle";
 
             foreach (string file in Directory.GetFiles(pluginsFolder.FullName, specifiedFileExtension, SearchOption.AllDirectories))
                 LoadBundle(file);
@@ -63,10 +63,29 @@ namespace LethalLib.Modules
             AssetBundle newBundle = AssetBundle.LoadFromFile(bundleFile);
 
             if (newBundle != null)
+            {
+                DebugHelper.Log("Loading Custom Content From Bundle: " + newBundle.name);
+
+                foreach (ExtendedLevel extendedLevel in newBundle.LoadAllAssets<ExtendedLevel>())
+                {
+                    ExtendedLevel.ProcessCustomLevel(extendedLevel);
+                    Levels.AddSelectableLevel(extendedLevel);
+                }
+
                 foreach (SelectableLevel selectableLevel in newBundle.LoadAllAssets<SelectableLevel>())
                     foreach (GameObject gameObject in newBundle.LoadAllAssets<GameObject>())
-                        if (gameObject.name == ExtendedLevel.GetNumberlessPlanetName(selectableLevel))
-                            new ExtendedLevel(selectableLevel, LevelType.Custom, generateTerminalAssets: true, newLevelPrefab: gameObject, newSourceName: newBundle.name);
+                        if (!Levels.AllSelectableLevelsList.Contains(selectableLevel))
+                            if (gameObject.name == ExtendedLevel.GetNumberlessPlanetName(selectableLevel))
+                            {
+                                ExtendedLevel extendedLevel = ScriptableObject.CreateInstance<ExtendedLevel>();
+                                extendedLevel.Initialize(selectableLevel, LevelType.Custom, generateTerminalAssets: true, newLevelPrefab: gameObject, newSourceName: newBundle.name);
+                                ExtendedLevel.ProcessCustomLevel(extendedLevel);
+                                Levels.AddSelectableLevel(extendedLevel);
+                                //new ExtendedLevel(selectableLevel, LevelType.Custom, generateTerminalAssets: true, newLevelPrefab: gameObject, newSourceName: newBundle.name);
+                            }
+            }
+
+            DebugHelper.DebugAllLevels();
         }
 
         public static void RestoreVanillaAssetReferences(SelectableLevel selectableLevel)

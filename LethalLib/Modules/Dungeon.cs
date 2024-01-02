@@ -327,8 +327,10 @@ namespace LethalLib.Modules
             customDungeons.Add(new CustomDungeon
             {
                 dungeonFlow = dungeon,
-                rarity = rarity,
-                LevelTypes = levelFlags,
+                rarity = 300,
+                LevelTypes = Levels.LevelTypes.All,
+                //rarity = rarity,
+                //LevelTypes = levelFlags,
                 firstTimeDungeonAudio = firstTimeDungeonAudio
             });
         }

@@ -58,7 +58,11 @@ namespace LethalLib.Modules
 
             Debug.Log("LethalLib (Batby): Initializing Level Data");
             foreach (SelectableLevel vanillaSelectableLevel in startOfRound.levels)
-                new ExtendedLevel(vanillaSelectableLevel, LevelType.Vanilla, generateTerminalAssets: false);
+            {
+                ExtendedLevel extendedLevel = ScriptableObject.CreateInstance<ExtendedLevel>();
+                extendedLevel.Initialize(vanillaSelectableLevel, LevelType.Vanilla, generateTerminalAssets: false);
+                AddSelectableLevel(extendedLevel);
+            }
 
             //Our AsssetBundle stuff runs before this function so atleast for now I just manually re-order the allLevelsList so its Vanilla -> Custom
 
@@ -74,6 +78,7 @@ namespace LethalLib.Modules
 
         public static void AddSelectableLevel(ExtendedLevel extendedLevel)
         {
+            DebugHelper.Log("Adding Selectable Level: " + extendedLevel.NumberlessPlanetName);
             if (extendedLevel.levelType == LevelType.Custom)
                 customLevelsList.Add(extendedLevel);
             else
