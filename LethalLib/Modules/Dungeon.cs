@@ -17,12 +17,12 @@ namespace LethalLib.Modules
     {
         public static void Init()
         {
-            On.RoundManager.GenerateNewFloor += RoundManager_GenerateNewFloor;
-            On.RoundManager.Start += RoundManager_Start;
-            On.StartOfRound.Start += StartOfRound_Start;
+            //On.RoundManager.GenerateNewFloor += RoundManager_GenerateNewFloor;
+            //On.RoundManager.Start += RoundManager_Start;
+            //On.StartOfRound.Start += StartOfRound_Start;
         }
 
-        private static void StartOfRound_Start(On.StartOfRound.orig_Start orig, StartOfRound self)
+        /*private static void StartOfRound_Start(On.StartOfRound.orig_Start orig, StartOfRound self)
         {
 
 
@@ -49,9 +49,9 @@ namespace LethalLib.Modules
 
             Plugin.logger.LogInfo("Added custom dungeons to levels");
             orig(self);
-        }
+        }*/
 
-        private static void RoundManager_Start(On.RoundManager.orig_Start orig, RoundManager self)
+        /*private static void RoundManager_Start(On.RoundManager.orig_Start orig, RoundManager self)
         {
             foreach(var dungeon in customDungeons)
             {
@@ -81,7 +81,7 @@ namespace LethalLib.Modules
 
 
             orig(self);
-        }
+        }*/
 
         public class CustomDungeonArchetype
         {
@@ -112,24 +112,19 @@ namespace LethalLib.Modules
         public static Dictionary<string, GameObjectChance> extraRooms = new Dictionary<string, GameObjectChance>();
         public static List<CustomDungeon> customDungeons = new List<CustomDungeon>();
 
-        private static void RoundManager_GenerateNewFloor(On.RoundManager.orig_GenerateNewFloor orig, RoundManager self)
+        //private static void RoundManager_GenerateNewFloor(On.RoundManager.orig_GenerateNewFloor orig, RoundManager self)
+        public static void PrePatchNewFloor(RoundManager self)
         {
             var name = self.currentLevel.name;
-            if (Enum.IsDefined(typeof(Levels.LevelTypes), name))
-            {
-                var levelEnum = (Levels.LevelTypes)Enum.Parse(typeof(Levels.LevelTypes), name);
 
                 var index = 0;
                 self.dungeonGenerator.Generator.DungeonFlow.Lines.ForEach((line) =>
                 {
                     foreach (var dungeonArchetype in customDungeonArchetypes)
                     {
-                        if (dungeonArchetype.LevelTypes.HasFlag(levelEnum))
-                        {
-                            if (!line.DungeonArchetypes.Contains(dungeonArchetype.archeType) && (dungeonArchetype.lineIndex == -1 || dungeonArchetype.lineIndex == index)) { 
-                                line.DungeonArchetypes.Add(dungeonArchetype.archeType);
-                                Plugin.logger.LogInfo($"Added {dungeonArchetype.archeType.name} to {name}");
-                            }
+                        if (!line.DungeonArchetypes.Contains(dungeonArchetype.archeType) && (dungeonArchetype.lineIndex == -1 || dungeonArchetype.lineIndex == index)) { 
+                            line.DungeonArchetypes.Add(dungeonArchetype.archeType);
+                            Plugin.logger.LogInfo($"Added {dungeonArchetype.archeType.name} to {name}");
                         }
                     }
 
@@ -166,22 +161,18 @@ namespace LethalLib.Modules
 
                 foreach (var graphLine in customGraphLines)
                 {
-                    if (graphLine.LevelTypes.HasFlag(levelEnum))
-                    {
                         if (!self.dungeonGenerator.Generator.DungeonFlow.Lines.Contains(graphLine.graphLine))
                         {
                             self.dungeonGenerator.Generator.DungeonFlow.Lines.Add(graphLine.graphLine);
                            // Plugin.logger.LogInfo($"Added {graphLine.graphLine.name} to {name}");
                         }
-                    }
                 }
-            }
             
-            orig(self);
+            //orig(self);
 
             // register prefabs
 
-            var networkManager = UnityEngine.Object.FindObjectOfType<NetworkManager>();
+            /*var networkManager = UnityEngine.Object.FindObjectOfType<NetworkManager>();
 
             RandomMapObject[] array = UnityEngine.Object.FindObjectsOfType<RandomMapObject>();
 
@@ -200,12 +191,12 @@ namespace LethalLib.Modules
                         randomMapObject.spawnablePrefabs[i] = prefab.Prefab;
                     }
                 }
-            }
+            }*/
 
 
                 // debug copy of GenerateNewFloor
-                /*
-                if (!self.hasInitializedLevelRandomSeed)
+                
+                /*if (!self.hasInitializedLevelRandomSeed)
                 {
                     self.hasInitializedLevelRandomSeed = true;
                     self.InitializeRandomNumberGenerators();
@@ -244,8 +235,8 @@ namespace LethalLib.Modules
                 self.dungeonGenerator.Generator.Seed = self.LevelRandom.Next();
                 Debug.Log($"GenerateNewFloor(). Map generator's random seed: {self.dungeonGenerator.Generator.Seed}");
                 self.dungeonGenerator.Generator.LengthMultiplier = self.currentLevel.factorySizeMultiplier * self.mapSizeMultiplier;
-                self.dungeonGenerator.Generate();
-                */
+                self.dungeonGenerator.Generate();*/
+                
         }
 
         /// <summary>

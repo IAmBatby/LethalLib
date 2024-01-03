@@ -1,4 +1,5 @@
-﻿using HarmonyLib;
+﻿using DunGen.Graph;
+using HarmonyLib;
 using LethalLib.Extras;
 using System;
 using System.Collections.Generic;
@@ -21,6 +22,7 @@ namespace LethalLib.Modules
         public string NumberlessPlanetName => GetNumberlessPlanetName(selectableLevel);
         public int fireExitsAmount = 0;
         public bool enableCustomDungeonInjection = true;
+        public List<(IntWithRarity, DungeonFlow)> dungeonFlowList = new List<(IntWithRarity, DungeonFlow)>();
 
         public ExtendedLevel(SelectableLevel newSelectableLevel, LevelType newLevelType, bool generateTerminalAssets, GameObject newLevelPrefab = null, string newSourceName = "Lethal Company")
         {
@@ -46,6 +48,12 @@ namespace LethalLib.Modules
             selectableLevel = newSelectableLevel;
             sourceName = newSourceName;
 
+            foreach (IntWithRarity dungeonFlowID in selectableLevel.dungeonFlowTypes)
+            {
+                //DebugHelper.Log("Level: " + ExtendedLevel.GetNumberlessPlanetName(newSelectableLevel) + " New Dungeon: " + RoundManager.Instance.dungeonFlowTypes[dungeonFlowID.id]);
+                //dungeonFlowList.Add((dungeonFlowID, RoundManager.Instance.dungeonFlowTypes[dungeonFlowID.id]));
+            }
+
             if (newLevelType == LevelType.Custom)
                 levelPrefab = newLevelPrefab;
 
@@ -55,7 +63,7 @@ namespace LethalLib.Modules
         public static void ProcessCustomLevel(ExtendedLevel extendedLevel)
         {
             extendedLevel.selectableLevel.levelID = 9 + Levels.customLevelsList.Count;
-            extendedLevel.selectableLevel.sceneName = "InitSceneLaunchOptions"; //BAD FIX THIS LATER.
+            extendedLevel.selectableLevel.sceneName = "Level4March"; //BAD FIX THIS LATER.
             extendedLevel.fireExitsAmount = extendedLevel.levelPrefab.GetComponentsInChildren<EntranceTeleport>().Length - 1; //-1 Becuase this includes Main Entrance.
             TerminalUtils.CreateLevelTerminalData(extendedLevel);
         }

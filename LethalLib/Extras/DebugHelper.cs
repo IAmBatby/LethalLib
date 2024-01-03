@@ -1,4 +1,5 @@
-﻿using HarmonyLib;
+﻿using DunGen.Graph;
+using HarmonyLib;
 using LethalLib.Modules;
 using System;
 using System.Collections.Generic;
@@ -150,6 +151,24 @@ namespace LethalLib.Extras
 
 
             Log(logString + "\n");
+        }
+
+        public static void DebugDungeonFlows(List<DungeonFlow> dungeonFlowList)
+        {
+            string debugString = "Dungen Flow Report: " + "\n" + "\n";
+
+            foreach (DungeonFlow dungeonFlow in dungeonFlowList)
+                debugString += dungeonFlow.name + "\n";
+        }
+
+        public static string GetDungeonFlowsLog(List<DungeonFlow> dungeonFlowList)
+        {
+            string returnString = string.Empty;
+
+            foreach (DungeonFlow dungeonFlow in dungeonFlowList)
+                returnString += dungeonFlow.name + "\n";
+
+            return (returnString);
         }
     }
 
