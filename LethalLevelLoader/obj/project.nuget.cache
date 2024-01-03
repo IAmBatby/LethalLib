@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "dgSpecHash": "7NKNu9WbiEEdGAdffp3iaTml7x1UiVnGhnoKYm+B2wMjQLbd1Dg854QAroGzOa6wRP3uv1gVdShj5o2jB6K0+A==",
+  "success": true,
+  "projectFilePath": "C:\\Projects\\LethalCompany\\LethalLevelLoader\\LethalLevelLoader\\LethalLevelLoader.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\Batby.000\\.nuget\\packages\\bepinex.assemblypublicizer.msbuild\\0.4.1\\bepinex.assemblypublicizer.msbuild.0.4.1.nupkg.sha512"
+  ],
+  "logs": []
+}
