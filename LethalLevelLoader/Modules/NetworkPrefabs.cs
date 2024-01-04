@@ -13,6 +13,7 @@ namespace LethalLevelLoader.Modules
     public class NetworkPrefabs
     {
         private static List<GameObject> _networkPrefabs = new List<GameObject>();
+        private static List<string> _networkPrefabNames = new List<string>();
         internal static void Init()
         {
             On.GameNetworkManager.Start += GameNetworkManager_Start;
@@ -23,8 +24,9 @@ namespace LethalLevelLoader.Modules
         /// </summary>
         public static void RegisterNetworkPrefab(GameObject prefab)
         {
-            if (!_networkPrefabs.Contains(prefab))
-                _networkPrefabs.Add(prefab);
+            DebugHelper.Log("Added: " + prefab.name + " To NetworkPrefab List!");
+            _networkPrefabs.Add(prefab);
+            _networkPrefabNames.Add(prefab.name);
             //UnityEngine.Object.FindObjectOfType<NetworkManager>().AddNetworkPrefab(prefab);
         }
 
@@ -34,10 +36,22 @@ namespace LethalLevelLoader.Modules
 
             DebugHelper.Log("Game NetworkManager Start");
 
+            NetworkManager networkManager = self.GetComponent<NetworkManager>();
+
+            List<GameObject> registeredPrefabs = new List<GameObject>();
+
+            foreach (NetworkPrefab networkPrefab in networkManager.NetworkConfig.Prefabs.m_Prefabs)
+                registeredPrefabs.Add(networkPrefab.Prefab);
+
             foreach (GameObject obj in _networkPrefabs)
             {
-                DebugHelper.Log("Registering: " + obj.name);
-                self.GetComponent<NetworkManager>().AddNetworkPrefab(obj);
+                if (!registeredPrefabs.Contains(obj))
+                {
+                    DebugHelper.Log("Registering: " + obj.name);
+                    self.GetComponent<NetworkManager>().AddNetworkPrefab(obj);
+                }
+                else
+                    DebugHelper.Log("Already Registered " + obj.name + ". Skipping!");
             }
             
         }

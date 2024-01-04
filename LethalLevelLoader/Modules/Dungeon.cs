@@ -81,10 +81,10 @@ namespace LethalLevelLoader.Modules
             List<ExtendedDungeonFlowWithRarity> initialReturnExtendedDungeonFlowsList = new List<ExtendedDungeonFlowWithRarity>();
             List<ExtendedDungeonFlowWithRarity> returnExtendedDungeonFlowsList = new List<ExtendedDungeonFlowWithRarity>();
 
-            foreach (IntWithRarity intWithRarity in extendedLevel.selectableLevel.dungeonFlowTypes)
+            /*foreach (IntWithRarity intWithRarity in extendedLevel.selectableLevel.dungeonFlowTypes)
                 if (RoundManager.Instance.dungeonFlowTypes[intWithRarity.id] != null)
                     if (Dungeon.TryGetExtendedDungeonFlow(RoundManager.Instance.dungeonFlowTypes[intWithRarity.id], out ExtendedDungeonFlow outExtendedDungeonFlow, LevelType.Vanilla))
-                        returnExtendedDungeonFlowsList.Add(new ExtendedDungeonFlowWithRarity(outExtendedDungeonFlow, intWithRarity.rarity));
+                        returnExtendedDungeonFlowsList.Add(new ExtendedDungeonFlowWithRarity(outExtendedDungeonFlow, intWithRarity.rarity));*/
             
             foreach (ExtendedDungeonFlow customDungeonFlow in customDungeonFlowsList)
                 initialReturnExtendedDungeonFlowsList.Add(new ExtendedDungeonFlowWithRarity(customDungeonFlow, customDungeonFlow.dungeonRarity));
@@ -104,24 +104,14 @@ namespace LethalLevelLoader.Modules
         public static void Generate_Prefix(DungeonGenerator __instance)
         {
             DebugHelper.Log("Started To Prefix Patch DungeonGenerator Generate!");
+            Scene scene = RoundManager.Instance.dungeonGenerator.gameObject.scene;
 
             if (Levels.TryGetExtendedLevel(RoundManager.Instance.currentLevel, out ExtendedLevel extendedLevel))
             {
-                Scene scene = RoundManager.Instance.dungeonGenerator.gameObject.scene;
-
                 SetDungeonFlow(__instance, extendedLevel);
                 PatchFireEscapes(__instance, extendedLevel, scene);
-
-
                 //LevelLoader.SyncLoadedLevel(scene);
             }
-        }
-
-        [HarmonyPatch(typeof(DungeonGenerator), "Generate")]
-        [HarmonyPostfix]
-        public static void Generate_Postfix(DungeonGenerator __instance)
-        {
-            DebugHelper.Log("Started To Postfix Patch DungeonGenerator Generate!");
         }
 
         public static void SetDungeonFlow(DungeonGenerator dungeonGenerator, ExtendedLevel extendedLevel)
@@ -155,9 +145,6 @@ namespace LethalLevelLoader.Modules
             DebugHelper.Log(debugString + "\n");
 
             dungeonGenerator.DungeonFlow = availableExtendedFlowsList[randomisedDungeonIndex].extendedDungeonFlow.dungeonFlow;
-
-
-
         }
 
         [HarmonyPatch(typeof(DungeonProxy), "AddTile")]
@@ -169,9 +156,10 @@ namespace LethalLevelLoader.Modules
 
         public static void PatchFireEscapes(DungeonGenerator dungeonGenerator, ExtendedLevel extendedLevel, Scene scene)
         {
-            DebugHelper.Log("Patching Fire Escapes!");
+            string debugString = "Fire Exit Patch Report, Details Below;" + "\n" + "\n";
+
             List<EntranceTeleport> entranceTeleports = new List<EntranceTeleport>();
-            int fireEscapesAmount = -1;
+            int fireEscapesAmount = 0;
 
             foreach (GameObject rootObject in scene.GetRootGameObjects())
                 foreach (EntranceTeleport entranceTeleport in rootObject.GetComponentsInChildren<EntranceTeleport>())
@@ -181,11 +169,22 @@ namespace LethalLevelLoader.Modules
                     entranceTeleport.firstTimeAudio = RoundManager.Instance.firstTimeDungeonAudios[0];
                 }
 
-
+            if (fireEscapesAmount != 0)
+                debugString += "EntranceTeleport's Found, " + extendedLevel.NumberlessPlanetName + " Contains " + fireEscapesAmount + " Entrances! ( " + fireEscapesAmount + " Fire Escapes) " + "\n"; 
 
             foreach (GlobalPropSettings globalPropSettings in dungeonGenerator.DungeonFlow.GlobalProps)
+            {
                 if (globalPropSettings.ID == 1231)
+                {
+                    Vector2 debugVector2 = new Vector2(globalPropSettings.Count.Min, globalPropSettings.Count.Max);
+                    debugString += "Found Fire Escape GlobalProp: (ID: 1231), Modifying Spawnrate Count From (" + debugVector2.x + "," + debugVector2.y + ") To (" + fireEscapesAmount + "," + fireEscapesAmount + ")" + "\n";
                     globalPropSettings.Count = new IntRange(fireEscapesAmount, fireEscapesAmount);
+                }
+                else
+                    debugString += "Fire Escape GlobalProp Could Not Be Found! Fire Escapes Will Not Be Patched!" + "\n";
+
+                DebugHelper.Log(debugString + "\n");
+            }
         }
 
         public static bool TryGetExtendedDungeonFlow(DungeonFlow dungeonFlow, out ExtendedDungeonFlow returnExtendedDungeonFlow, LevelType levelType = LevelType.Any)

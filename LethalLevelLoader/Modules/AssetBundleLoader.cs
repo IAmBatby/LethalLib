@@ -66,46 +66,62 @@ namespace LethalLevelLoader.Modules
             }
         }
 
-        public static void RegisterDungeonContent(DungeonFlow dungeonFlow)
+        public static SpawnSyncedObject[] GetAllSpawnSyncedObjectsInDungeonFlow(DungeonFlow dungeonFlow)
         {
-            //List<Tile> dungeonTiles = UnityEngine.Object.FindObjectsOfType<Tile>
-            List<SpawnSyncedObject> spawnSyncedObjectList = new List<SpawnSyncedObject>();
+            List<SpawnSyncedObject> returnList = new List<SpawnSyncedObject>();
+            List<Tile> tilesList = new List<Tile>();
 
             foreach (GraphNode dungeonNode in dungeonFlow.Nodes)
                 foreach (TileSet dungeonTileSet in dungeonNode.TileSets)
                     foreach (GameObjectChance dungeonTileWeight in dungeonTileSet.TileWeights.Weights)
-                        FindSpawnSyncedObjectsInTiles(dungeonTileWeight.Value.GetComponentsInChildren<Tile>());
+                        foreach (Tile dungeonTile in dungeonTileWeight.Value.GetComponentsInChildren<Tile>())
+                            tilesList.Add(dungeonTile);
 
             foreach (GraphLine dungeonLine in dungeonFlow.Lines)
                 foreach (DungeonArchetype dungeonArchetype in dungeonLine.DungeonArchetypes)
                 {
                     foreach (TileSet dungeonTileSet in dungeonArchetype.BranchCapTileSets)
                         foreach (GameObjectChance dungeonTileWeight in dungeonTileSet.TileWeights.Weights)
-                            FindSpawnSyncedObjectsInTiles(dungeonTileWeight.Value.GetComponentsInChildren<Tile>());
+                            foreach (Tile dungeonTile in dungeonTileWeight.Value.GetComponentsInChildren<Tile>())
+                                tilesList.Add(dungeonTile);
 
                     foreach (TileSet dungeonTileSet in dungeonArchetype.TileSets)
                         foreach (GameObjectChance dungeonTileWeight in dungeonTileSet.TileWeights.Weights)
-                                FindSpawnSyncedObjectsInTiles(dungeonTileWeight.Value.GetComponentsInChildren<Tile>());
+                            foreach (Tile dungeonTile in dungeonTileWeight.Value.GetComponentsInChildren<Tile>())
+                                tilesList.Add(dungeonTile);
                 }
-        }
 
-        public static void FindSpawnSyncedObjectsInTiles(Tile[] tileList)
-        {
-            foreach (Tile dungeonTile in tileList)
+            foreach (Tile dungeonTile in tilesList)
             {
+                DebugHelper.Log("Dungeon Tile: " + dungeonTile.name);
                 foreach (Doorway dungeonDoorway in dungeonTile.gameObject.GetComponentsInChildren<Doorway>())
+                {
+                    DebugHelper.Log("Dungeon Doorway: " + dungeonDoorway.name);
                     foreach (GameObjectWeight doorwayTileWeight in dungeonDoorway.ConnectorPrefabWeights)
-                        if (doorwayTileWeight.GameObject.GetComponent<SpawnSyncedObject>() != null)
-                            RegisterSpawnSyncedObject(doorwayTileWeight.GameObject.GetComponent<SpawnSyncedObject>());
+                        foreach (SpawnSyncedObject spawnSyncedObject in doorwayTileWeight.GameObject.GetComponentsInChildren<SpawnSyncedObject>())
+                            returnList.Add(spawnSyncedObject);
+
+                    foreach (GameObjectWeight doorwayTileWeight in dungeonDoorway.BlockerPrefabWeights)
+                        foreach (SpawnSyncedObject spawnSyncedObject in doorwayTileWeight.GameObject.GetComponentsInChildren<SpawnSyncedObject>())
+                            returnList.Add(spawnSyncedObject);
+                }
 
                 foreach (SpawnSyncedObject spawnSyncedObject in dungeonTile.gameObject.GetComponentsInChildren<SpawnSyncedObject>())
-                    RegisterSpawnSyncedObject(spawnSyncedObject);
+                    returnList.Add(spawnSyncedObject);
             }
+
+
+            return (returnList.ToArray());
+        }
+
+        public static void RegisterDungeonContent(DungeonFlow dungeonFlow)
+        {
+            foreach (SpawnSyncedObject spawnSyncedObject in GetAllSpawnSyncedObjectsInDungeonFlow(dungeonFlow))
+                RegisterSpawnSyncedObject(spawnSyncedObject);
         }
 
         public static void RegisterSpawnSyncedObject(SpawnSyncedObject spawnSyncedObject)
         {
-            DebugHelper.Log("Added: " + spawnSyncedObject.spawnPrefab.name + " To NetworkPrefab List!");
             if (spawnSyncedObject.spawnPrefab.GetComponent<NetworkObject>() == null)
                 spawnSyncedObject.spawnPrefab.AddComponent<NetworkObject>();
             NetworkPrefabs.RegisterNetworkPrefab(spawnSyncedObject.spawnPrefab);
