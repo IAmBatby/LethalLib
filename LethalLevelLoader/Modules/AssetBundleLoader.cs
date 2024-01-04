@@ -66,9 +66,8 @@ namespace LethalLevelLoader.Modules
             }
         }
 
-        public static SpawnSyncedObject[] GetAllSpawnSyncedObjectsInDungeonFlow(DungeonFlow dungeonFlow)
+        public static Tile[] GetAllTilesInDungeonFlow(DungeonFlow dungeonFlow)
         {
-            List<SpawnSyncedObject> returnList = new List<SpawnSyncedObject>();
             List<Tile> tilesList = new List<Tile>();
 
             foreach (GraphNode dungeonNode in dungeonFlow.Nodes)
@@ -91,12 +90,31 @@ namespace LethalLevelLoader.Modules
                                 tilesList.Add(dungeonTile);
                 }
 
-            foreach (Tile dungeonTile in tilesList)
+            return (tilesList.ToArray());
+        }
+
+        public static RandomMapObject[] GetAllMapObjectsInTiles(Tile[] tiles)
+        {
+            List<RandomMapObject> returnList = new List<RandomMapObject>();
+
+            foreach (Tile dungeonTile in tiles)
+                foreach (RandomMapObject randomMapObject in dungeonTile.gameObject.GetComponentsInChildren<RandomMapObject>())
+                {
+                    DebugHelper.Log("Found RandomMapObject: " + randomMapObject.name);
+                    returnList.Add(randomMapObject);
+                }
+
+            return (returnList.ToArray());
+        }
+
+        public static SpawnSyncedObject[] GetAllSpawnSyncedObjectsInTiles(Tile[] tiles)
+        {
+            List<SpawnSyncedObject> returnList = new List<SpawnSyncedObject>();
+
+            foreach (Tile dungeonTile in tiles)
             {
-                DebugHelper.Log("Dungeon Tile: " + dungeonTile.name);
                 foreach (Doorway dungeonDoorway in dungeonTile.gameObject.GetComponentsInChildren<Doorway>())
                 {
-                    DebugHelper.Log("Dungeon Doorway: " + dungeonDoorway.name);
                     foreach (GameObjectWeight doorwayTileWeight in dungeonDoorway.ConnectorPrefabWeights)
                         foreach (SpawnSyncedObject spawnSyncedObject in doorwayTileWeight.GameObject.GetComponentsInChildren<SpawnSyncedObject>())
                             returnList.Add(spawnSyncedObject);
@@ -116,7 +134,9 @@ namespace LethalLevelLoader.Modules
 
         public static void RegisterDungeonContent(DungeonFlow dungeonFlow)
         {
-            foreach (SpawnSyncedObject spawnSyncedObject in GetAllSpawnSyncedObjectsInDungeonFlow(dungeonFlow))
+            Tile[] allTiles = GetAllTilesInDungeonFlow(dungeonFlow);
+
+            foreach (SpawnSyncedObject spawnSyncedObject in GetAllSpawnSyncedObjectsInTiles(allTiles))
                 RegisterSpawnSyncedObject(spawnSyncedObject);
         }
 
@@ -138,7 +158,7 @@ namespace LethalLevelLoader.Modules
             foreach ((SelectableLevel, GameObject) selectableLevel in obtainedSelectableLevelsList)
             {
                 ExtendedLevel extendedLevel = ScriptableObject.CreateInstance<ExtendedLevel>();
-                extendedLevel.Initialize(selectableLevel.Item1, LevelType.Custom, generateTerminalAssets: true, newLevelPrefab: selectableLevel.Item2, newSourceName: "fixlater");
+                extendedLevel.Initialize(selectableLevel.Item1, ContentType.Custom, generateTerminalAssets: true, newLevelPrefab: selectableLevel.Item2, newSourceName: "fixlater");
                 ExtendedLevel.ProcessCustomLevel(extendedLevel);
                 Levels.AddSelectableLevel(extendedLevel);
             }
@@ -146,12 +166,29 @@ namespace LethalLevelLoader.Modules
             DebugHelper.DebugAllLevels();
         }
 
-        public static void RestoreVanillaAssetReferences(SelectableLevel selectableLevel)
+        public static void RestoreVanillaDungeonAssetReferences(ExtendedDungeonFlow extendedDungeonFlow)
+        {
+            Tile[] allTiles = GetAllTilesInDungeonFlow(extendedDungeonFlow.dungeonFlow);
+
+            foreach (RandomMapObject randomMapObject in GetAllMapObjectsInTiles(allTiles))
+            {
+                foreach (GameObject spawnablePrefab in new List<GameObject>(randomMapObject.spawnablePrefabs))
+                    foreach (GameObject vanillaPrefab in ContentExtractor.vanillaSpawnableInsideMapObjectsList)
+                        if (spawnablePrefab.name == vanillaPrefab.name)
+                        {
+                            DebugHelper.Log("Replacing Dungeon RandomSpawnablePrefab " + spawnablePrefab.name + " With: " + vanillaPrefab.name);
+                            int index = randomMapObject.spawnablePrefabs.IndexOf(spawnablePrefab);
+                            randomMapObject.spawnablePrefabs[index] = vanillaPrefab;
+                        }
+            }
+        }
+
+        public static void RestoreVanillaLevelAssetReferences(ExtendedLevel extendedLevel)
         {
 
-            AudioSource[] moonAudioSources = selectableLevel.planetPrefab.GetComponentsInChildren<AudioSource>();
+            AudioSource[] moonAudioSources = extendedLevel.levelPrefab.GetComponentsInChildren<AudioSource>();
 
-            DebugHelper.Log("Found " + moonAudioSources.Length + " AudioSources In Custom Moon: " + selectableLevel.PlanetName);
+            DebugHelper.Log("Found " + moonAudioSources.Length + " AudioSources In Custom Moon: " + extendedLevel.NumberlessPlanetName);
 
             foreach (AudioSource audioSource in moonAudioSources)
             {
@@ -162,39 +199,39 @@ namespace LethalLevelLoader.Modules
                 }
             }
 
-            foreach (SpawnableItemWithRarity spawnableItem in selectableLevel.spawnableScrap)
+            foreach (SpawnableItemWithRarity spawnableItem in extendedLevel.selectableLevel.spawnableScrap)
                 foreach (Item vanillaItem in ContentExtractor.vanillaItemsList)
                     if (spawnableItem.spawnableItem.itemName == vanillaItem.itemName)
                         spawnableItem.spawnableItem = vanillaItem;
 
-            foreach (SpawnableEnemyWithRarity spawnableEnemy in selectableLevel.Enemies)
+            foreach (SpawnableEnemyWithRarity spawnableEnemy in extendedLevel.selectableLevel.Enemies)
                 foreach (EnemyType vanillaEnemy in ContentExtractor.vanillaEnemiesList)
                     if (spawnableEnemy.enemyType != null && spawnableEnemy.enemyType.enemyName == vanillaEnemy.enemyName)
                         spawnableEnemy.enemyType = vanillaEnemy;
 
-            foreach (SpawnableEnemyWithRarity enemyType in selectableLevel.OutsideEnemies)
+            foreach (SpawnableEnemyWithRarity enemyType in extendedLevel.selectableLevel.OutsideEnemies)
                 foreach (EnemyType vanillaEnemyType in ContentExtractor.vanillaEnemiesList)
                     if (enemyType.enemyType != null && enemyType.enemyType.enemyName == vanillaEnemyType.enemyName)
                         enemyType.enemyType = vanillaEnemyType;
 
-            foreach (SpawnableEnemyWithRarity enemyType in selectableLevel.DaytimeEnemies)
+            foreach (SpawnableEnemyWithRarity enemyType in extendedLevel.selectableLevel.DaytimeEnemies)
                 foreach (EnemyType vanillaEnemyType in ContentExtractor.vanillaEnemiesList)
                     if (enemyType.enemyType != null && enemyType.enemyType.enemyName == vanillaEnemyType.enemyName)
                         enemyType.enemyType = vanillaEnemyType;
 
-            foreach (SpawnableMapObject spawnableMapObject in selectableLevel.spawnableMapObjects)
+            foreach (SpawnableMapObject spawnableMapObject in extendedLevel.selectableLevel.spawnableMapObjects)
                 foreach (GameObject vanillaSpawnableMapObject in ContentExtractor.vanillaSpawnableInsideMapObjectsList)
                     if (spawnableMapObject.prefabToSpawn != null && spawnableMapObject.prefabToSpawn.name == vanillaSpawnableMapObject.name)
                         spawnableMapObject.prefabToSpawn = vanillaSpawnableMapObject;
 
-            foreach (SpawnableOutsideObjectWithRarity spawnableOutsideObject in selectableLevel.spawnableOutsideObjects)
+            foreach (SpawnableOutsideObjectWithRarity spawnableOutsideObject in extendedLevel.selectableLevel.spawnableOutsideObjects)
                 foreach (SpawnableOutsideObject vanillaSpawnableOutsideObject in ContentExtractor.vanillaSpawnableOutsideMapObjectsList)
                     if (spawnableOutsideObject.spawnableObject != null && spawnableOutsideObject.spawnableObject.name == vanillaSpawnableOutsideObject.name)
                         spawnableOutsideObject.spawnableObject = vanillaSpawnableOutsideObject;
 
             foreach (LevelAmbienceLibrary vanillaAmbienceLibrary in ContentExtractor.vanillaAmbienceLibrariesList)
-                if (selectableLevel.levelAmbienceClips != null && selectableLevel.levelAmbienceClips.name == vanillaAmbienceLibrary.name)
-                    selectableLevel.levelAmbienceClips = vanillaAmbienceLibrary;
+                if (extendedLevel.selectableLevel.levelAmbienceClips != null && extendedLevel.selectableLevel.levelAmbienceClips.name == vanillaAmbienceLibrary.name)
+                    extendedLevel.selectableLevel.levelAmbienceClips = vanillaAmbienceLibrary;
             
         }
 
@@ -206,7 +243,7 @@ namespace LethalLevelLoader.Modules
             {
                 DebugHelper.Log("Moons SelectableLevel Is: " + (selectableLevel != null));
                 ExtendedLevel extendedLevel = ScriptableObject.CreateInstance<ExtendedLevel>();
-                extendedLevel.Initialize(selectableLevel, LevelType.Vanilla, generateTerminalAssets: false);
+                extendedLevel.Initialize(selectableLevel, ContentType.Vanilla, generateTerminalAssets: false);
                 Levels.AddSelectableLevel(extendedLevel);
             }
         }
@@ -218,7 +255,7 @@ namespace LethalLevelLoader.Modules
             foreach (DungeonFlow dungeonFlow in RoundManager.Instance.dungeonFlowTypes)
             {
                 ExtendedDungeonFlow extendedDungeonFlow = ScriptableObject.CreateInstance<ExtendedDungeonFlow>();
-                extendedDungeonFlow.Initialize(dungeonFlow, null, LevelType.Vanilla, "Lethal Company");
+                extendedDungeonFlow.Initialize(dungeonFlow, null, ContentType.Vanilla, "Lethal Company");
                 Dungeon.AddExtendedDungeonFlow(extendedDungeonFlow);
                 //Gotta assign the right audio later.
             }

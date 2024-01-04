@@ -24,7 +24,6 @@ namespace LethalLevelLoader.Modules
         /// </summary>
         public static void RegisterNetworkPrefab(GameObject prefab)
         {
-            DebugHelper.Log("Added: " + prefab.name + " To NetworkPrefab List!");
             _networkPrefabs.Add(prefab);
             _networkPrefabNames.Add(prefab.name);
             //UnityEngine.Object.FindObjectOfType<NetworkManager>().AddNetworkPrefab(prefab);
@@ -47,11 +46,8 @@ namespace LethalLevelLoader.Modules
             {
                 if (!registeredPrefabs.Contains(obj))
                 {
-                    DebugHelper.Log("Registering: " + obj.name);
                     self.GetComponent<NetworkManager>().AddNetworkPrefab(obj);
                 }
-                else
-                    DebugHelper.Log("Already Registered " + obj.name + ". Skipping!");
             }
             
         }

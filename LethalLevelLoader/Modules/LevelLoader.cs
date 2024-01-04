@@ -139,45 +139,11 @@ public class LevelLoader
         }
     }
 
-    public class CachedChildedNetworkObjectData
-    {
-        public GameObject childObject;
-        public NetworkObject childNetworkObject;
-        public Transform childParentTransform;
-
-        public CachedChildedNetworkObjectData(GameObject newChildGameObject, Transform newIntendedParent, NetworkObject newChildNetworkObject)
-        { childNetworkObject = newChildNetworkObject;  childObject = newChildGameObject; childParentTransform = newIntendedParent; }
-    }
-
-    [HarmonyPatch(typeof(RoundManager), "SpawnSyncedProps")]
-    [HarmonyPrefix]
-    public static void SpawnedSyncedProps_Prefix()
-    {
-        DebugHelper.Log("SpawnSyncedProps Debug: MapPropsContainer Is: " + (GameObject.FindGameObjectWithTag("MapPropsContainer") != null));
-        DebugHelper.Log("SpawnSyncedProps Debug: SpawnSyncedObject Array Length Is: " + UnityEngine.Object.FindObjectsOfType<SpawnSyncedObject>().Length);
-
-        int counter1 = 0;
-        int counter2 = 0;
-
-        foreach (SpawnSyncedObject spawnSyncedObject in UnityEngine.Object.FindObjectsOfType<SpawnSyncedObject>())
-        {
-            DebugHelper.Log("SpawnSyncedProp: " + spawnSyncedObject.name + " | " + spawnSyncedObject.spawnPrefab.name);
-            if (spawnSyncedObject.spawnPrefab == null)
-                counter1++;
-            if (spawnSyncedObject.GetComponent<NetworkObject>() == null)
-                counter2 ++;
-        }
-
-        DebugHelper.Log("SpawnSyncedProps Debug: Number Of SpawnSyncedObject's Missing A SpawnPrefab Is: " + counter1);
-        DebugHelper.Log("SpawnSyncedProps Debug: Number Of SpawnSyncedObject's Missing A NetworkObject Is: " + counter1);
-
-    }
-
     [HarmonyPatch(typeof(RoundManager), "GenerateNewFloor")]
     [HarmonyPostfix]
     public static void GenerateNewFloor_PostFix()
     {
-        RoundManager.Instance.currentLevel.spawnableMapObjects = Array.Empty<SpawnableMapObject>();
+        //RoundManager.Instance.currentLevel.spawnableMapObjects = Array.Empty<SpawnableMapObject>();
     }
 
     public static void DisableTerrain() //Jank hotfix to load terrain later so Unity doesn't get overwhelmed.

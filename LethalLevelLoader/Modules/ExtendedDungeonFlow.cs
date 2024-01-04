@@ -1,4 +1,5 @@
 ﻿using DunGen.Graph;
+using LethalLevelLoader.Extras;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -13,7 +14,7 @@ namespace LethalLevelLoader.Modules
         public int dungeonID;
         public int dungeonRarity;
 
-        public LevelType dungeonType;
+        public ContentType dungeonType;
         public string sourceName = "Lethal Company";
         public AudioClip dungeonFirstTimeAudio;
 
@@ -21,25 +22,33 @@ namespace LethalLevelLoader.Modules
 
 
 
-        public void Initialize(DungeonFlow newDungeonFlow, AudioClip newFirstTimeAudio, LevelType newDungeonType, string newSourceName, int newDungeonRarity = 0, ExtendedDungeonPreferences newPreferences = null)
+        public void Initialize(DungeonFlow newDungeonFlow, AudioClip newFirstTimeAudio, ContentType newDungeonType, string newSourceName, int newDungeonRarity = 0, ExtendedDungeonPreferences newPreferences = null)
         {
             dungeonFlow = newDungeonFlow;
             dungeonFirstTimeAudio = newFirstTimeAudio;
             dungeonType = newDungeonType;
             dungeonRarity = newDungeonRarity;
 
+            if (name == string.Empty)
+                name = dungeonFlow.name;
+
             //dungeonID = RoundManager.Instance.dungeonFlowTypes.Length + Dungeon.allExtendedDungeonsList.Count;
 
             if (extendedDungeonPreferences == null)
-                extendedDungeonPreferences = new ExtendedDungeonPreferences();
+                extendedDungeonPreferences = ScriptableObject.CreateInstance<ExtendedDungeonPreferences>();
 
-            extendedDungeonPreferences.targetedLevelTags.Add("Custom");
+            if (dungeonType == ContentType.Custom)
+                extendedDungeonPreferences.levelTagsList.Add(new StringWithRarity("Custom", 300));
+            else
+                extendedDungeonPreferences.levelTagsList.Add(new StringWithRarity("Vanilla", 300));
+            extendedDungeonPreferences.levelCostMin = 700;
+
         }
     }
 
-    [Serializable]
+    /*[Serializable]
     public class ExtendedDungeonPreferences
     {
         public List<string> targetedLevelTags = new List<string>();
-    }
+    }*/
 }

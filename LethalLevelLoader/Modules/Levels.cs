@@ -3,8 +3,11 @@ using HarmonyLib;
 using LethalLevelLoader.Extras;
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using Unity.Netcode;
 using UnityEngine;
 using static LethalLevelLoader.Modules.Dungeon;
+using Object = UnityEngine.Object;
 
 namespace LethalLevelLoader.Modules
 {
@@ -44,6 +47,61 @@ namespace LethalLevelLoader.Modules
         }
 
 
+        [HarmonyPatch(typeof(RoundManager), "SpawnMapObjects")]
+        [HarmonyPrefix]
+        public static void SpawnMapObjects_Prefix(RoundManager __instance)
+        {
+            List<RandomMapObject> spawnableMapObjects = Object.FindObjectsOfType<RandomMapObject>().ToList();
+
+            string debugString = string.Empty;
+
+            debugString += "MapPropsContainer Is: " + (GameObject.FindGameObjectWithTag("MapPropsContainer") != null) + "\n";
+            debugString += "AnomalyRandom Is: " + (__instance.AnomalyRandom != null);
+
+            debugString += "Current Level SpawnMapObject List; Count Is: " + __instance.currentLevel.spawnableMapObjects.Length + "\n";
+
+            foreach (SpawnableMapObject spawnMapObject in __instance.currentLevel.spawnableMapObjects)
+            {
+                if (spawnMapObject != null)
+                {
+                    debugString += "SpawnMapObject Found" + "\n";
+                    if (spawnMapObject.prefabToSpawn != null)
+                    {
+                        debugString += "PrefabToSpawn Name: " + spawnMapObject.prefabToSpawn.name + "\n";
+                        debugString += "Amount" + spawnMapObject.numberToSpawn.ToString() + "\n";
+                        debugString += "NetworkObject Is: " + (spawnMapObject.prefabToSpawn.GetComponent<NetworkObject>() != null);
+                    }
+                    else
+                        debugString += "PrefabToSpawn Was Null!" + "\n";
+                }
+                else
+                    debugString += "SpawnMapObject Was Null!" + "\n";
+            }
+
+            debugString += "\n" + "Current Dungeon RandomMapObject List; Count Is: " + spawnableMapObjects.Count + "\n";
+
+            foreach (RandomMapObject randomMapObject in spawnableMapObjects)
+            {
+                if (randomMapObject != null)
+                {
+                    debugString += "\n" + "RandomMapObject Name: " + randomMapObject.name + "\n";
+                    foreach (GameObject randomObject in randomMapObject.spawnablePrefabs)
+                    {
+                        if (randomObject != null)
+                            debugString += "SpawnablePrefab Name: " + randomObject.name + "\n";
+                        else
+                            debugString += "SpawnablePrefab Was Null!" + "\n";
+
+                    }
+                }
+                else
+                    debugString += "RandomMapObject Was Null!" + "\n";
+            }
+
+            debugString += "End Of SpawnMapObjects Log." + "\n";
+
+            DebugHelper.Log(debugString);
+        }
 
         [HarmonyPatch(typeof(StartOfRound), "ChangeLevel")]
         [HarmonyPrefix]
@@ -59,17 +117,19 @@ namespace LethalLevelLoader.Modules
         {
             PatchVanillaLevelLists();
 
-            foreach (ExtendedLevel customLevel in Levels.customLevelsList)
-                AssetBundleLoader.RestoreVanillaAssetReferences(customLevel.selectableLevel);
+            ManuallyAssignTagsToVanillaLevels();
 
-            foreach (ExtendedLevel extendedLevel in allLevelsList)
-                InjectCustomDungeonsIntoSelectableLevel(extendedLevel);
+            foreach (ExtendedLevel customLevel in Levels.customLevelsList)
+                AssetBundleLoader.RestoreVanillaLevelAssetReferences(customLevel);
+
+            foreach (ExtendedDungeonFlow customDungeonFlow in Dungeon.customDungeonFlowsList)
+                AssetBundleLoader.RestoreVanillaDungeonAssetReferences(customDungeonFlow);
         }
 
         public static void AddSelectableLevel(ExtendedLevel extendedLevel)
         {
             DebugHelper.Log("Adding Selectable Level: " + extendedLevel.NumberlessPlanetName);
-            if (extendedLevel.levelType == LevelType.Custom)
+            if (extendedLevel.levelType == ContentType.Custom)
                 customLevelsList.Add(extendedLevel);
             else
                 vanillaLevelsList.Add(extendedLevel);
@@ -95,43 +155,20 @@ namespace LethalLevelLoader.Modules
             DebugHelper.Log("Terminal Levels List Length Is: " + terminal.moonsCatalogueList.Length);
         }
 
-        public static void InjectCustomDungeonsIntoSelectableLevel(ExtendedLevel extendedLevel)
-        {
-            /*string debugString = "ExtendedLevel: " + extendedLevel.NumberlessPlanetName + " Patched Available DungeonFlow List: " + "\n" + "\n";
-
-            extendedLevel.extendedDungeonFlowsList = new List<(ExtendedDungeonFlow, int)>();
-
-            foreach (IntWithRarity intWithRarity in extendedLevel.selectableLevel.dungeonFlowTypes)
-                if (RoundManager.Instance.dungeonFlowTypes[intWithRarity.id] != null)
-                    if (Dungeon.TryGetExtendedDungeonFlow(RoundManager.Instance.dungeonFlowTypes[intWithRarity.id], out ExtendedDungeonFlow extendedDungeonFlow, LevelType.Vanilla))
-                    {
-                        extendedLevel.extendedDungeonFlowsList.Add((extendedDungeonFlow, intWithRarity.rarity));
-                        debugString += extendedDungeonFlow.dungeonFlow.name + " | " + intWithRarity.rarity + "\n";
-                    }
-
-            foreach (ExtendedDungeonFlow extendedDungeonFlow in Dungeon.customDungeonFlowsList)
-            {
-                extendedLevel.extendedDungeonFlowsList.Add((extendedDungeonFlow, extendedDungeonFlow.dungeonRarity));
-                debugString += extendedDungeonFlow.dungeonFlow.name + " | " + extendedDungeonFlow.dungeonRarity + "\n";
-            }
-
-            DebugHelper.Log(debugString + "\n");*/
-        }
-
-        public static bool TryGetExtendedLevel(SelectableLevel selectableLevel, out ExtendedLevel returnExtendedLevel, LevelType levelType = LevelType.Any)
+        public static bool TryGetExtendedLevel(SelectableLevel selectableLevel, out ExtendedLevel returnExtendedLevel, ContentType levelType = ContentType.Any)
         {
             returnExtendedLevel = null;
             List<ExtendedLevel> extendedLevelsList = new List<ExtendedLevel>();
 
             switch (levelType)
             {
-                case LevelType.Vanilla:
+                case ContentType.Vanilla:
                     extendedLevelsList = vanillaLevelsList;
                     break;
-                case LevelType.Custom:
+                case ContentType.Custom:
                     extendedLevelsList = customLevelsList;
                     break;
-                case LevelType.Any:
+                case ContentType.Any:
                     extendedLevelsList = allLevelsList;
                     break;
             }
@@ -141,6 +178,63 @@ namespace LethalLevelLoader.Modules
                     returnExtendedLevel = extendedLevel;
 
             return (returnExtendedLevel != null);
+        }
+
+        public static void ManuallyAssignTagsToVanillaLevels()
+        {
+            foreach (ExtendedLevel vanillaLevel in vanillaLevelsList)
+            {
+                vanillaLevel.levelTags.Add("Vanilla");
+
+                if (vanillaLevel.NumberlessPlanetName == "Experimentation")
+                    vanillaLevel.levelTags.Add("Wasteland");
+                else if (vanillaLevel.NumberlessPlanetName == "Assurance")
+                {
+                    vanillaLevel.levelTags.Add("Desert");
+                    vanillaLevel.levelTags.Add("Canyon");
+                }
+                else if (vanillaLevel.NumberlessPlanetName == "Vow")
+                {
+                    vanillaLevel.levelTags.Add("Forest");
+                    vanillaLevel.levelTags.Add("Valley");
+                }
+                else if (vanillaLevel.NumberlessPlanetName == "Gordion")
+                {
+                    vanillaLevel.levelTags.Add("Company");
+                    vanillaLevel.levelTags.Add("Quota");
+                }
+                else if (vanillaLevel.NumberlessPlanetName == "Offense")
+                {
+                    vanillaLevel.levelTags.Add("Desert");
+                    vanillaLevel.levelTags.Add("Canyon");
+                }
+                else if (vanillaLevel.NumberlessPlanetName == "March")
+                {
+                    vanillaLevel.levelTags.Add("Forest");
+                    vanillaLevel.levelTags.Add("Valley");
+                }
+                else if (vanillaLevel.NumberlessPlanetName == "Rend")
+                {
+                    vanillaLevel.levelTags.Add("Snow");
+                    vanillaLevel.levelTags.Add("Ice");
+                    vanillaLevel.levelTags.Add("Tundra");
+                    vanillaLevel.levelCost = 600;
+                }
+                else if (vanillaLevel.NumberlessPlanetName == "Dine")
+                {
+                    vanillaLevel.levelTags.Add("Snow");
+                    vanillaLevel.levelTags.Add("Ice");
+                    vanillaLevel.levelTags.Add("Tundra");
+                    vanillaLevel.levelCost = 650;
+                }
+                else if (vanillaLevel.NumberlessPlanetName == "Titan")
+                {
+                    vanillaLevel.levelTags.Add("Snow");
+                    vanillaLevel.levelTags.Add("Ice");
+                    vanillaLevel.levelTags.Add("Tundra");
+                    vanillaLevel.levelCost = 700;
+                }
+            }
         }
     }
 }

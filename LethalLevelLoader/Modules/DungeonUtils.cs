@@ -12,112 +12,174 @@ namespace LethalLevelLoader.Modules
 {
     public class DungeonUtils
     {
-        /// <summary>
-        /// Registers a custom archetype to a level.
-        /// </summary>
-        public static void AddArchetype(DungeonArchetype archetype, Levels.LevelTypes levelFlags, int lineIndex = -1)
-        {
-            var customArchetype = new CustomDungeonArchetype();
-            customArchetype.archeType = archetype;
-            customArchetype.LevelTypes = levelFlags;
-            customArchetype.lineIndex = lineIndex;
-            customDungeonArchetypes.Add(customArchetype);
-        }
-
-        /// <summary>
-        /// Registers a dungeon graphline to a level.
-        /// </summary>
-        public static void AddLine(GraphLine line, Levels.LevelTypes levelFlags)
-        {
-            var customLine = new CustomGraphLine();
-            customLine.graphLine = line;
-            customLine.LevelTypes = levelFlags;
-            customGraphLines.Add(customLine);
-        }
-
-        /// <summary>
-        /// Registers a dungeon graphline to a level.
-        /// </summary>
-        public static void AddLine(DungeonGraphLineDef line, Levels.LevelTypes levelFlags)
-        {
-            AddLine(line.graphLine, levelFlags);
-        }
-
-        /// <summary>
-        /// Adds a tileset to a dungeon archetype
-        /// </summary>
-        public static void AddTileSet(TileSet set, string archetypeName)
-        {
-            extraTileSets.Add(archetypeName, set);
-        }
-
-        /// <summary>
-        /// Adds a room to a tileset with the given name.
-        /// </summary>
-        public static void AddRoom(GameObjectChance room, string tileSetName)
-        {
-            extraRooms.Add(tileSetName, room);
-        }
-
-        /// <summary>
-        /// Adds a room to a tileset with the given name.
-        /// </summary>
-        public static void AddRoom(GameObjectChanceDef room, string tileSetName)
-        {
-            AddRoom(room.gameObjectChance, tileSetName);
-        }
-
-        /// <summary>
-        /// Adds a dungeon to the given levels.
-        /// </summary>
-        public static void AddDungeon(DungeonDef dungeon, Levels.LevelTypes levelFlags)
-        {
-            AddDungeon(dungeon.dungeonFlow, dungeon.rarity, levelFlags, dungeon.firstTimeDungeonAudio);
-        }
-
-        /// <summary>
-        /// Adds a dungeon to the given levels.
-        /// </summary>
-        public static void AddDungeon(DungeonDef dungeon, Levels.LevelTypes levelFlags, string[] levelOverrides)
-        {
-            AddDungeon(dungeon.dungeonFlow, dungeon.rarity, levelFlags, levelOverrides, dungeon.firstTimeDungeonAudio);
-        }
-
-        /// <summary>
-        /// Adds a dungeon to the given levels.
-        /// </summary>
-        public static void AddDungeon(DungeonFlow dungeon, int rarity, Levels.LevelTypes levelFlags, AudioClip firstTimeDungeonAudio = null)
+        public static void AddDungeon(DungeonFlow dungeon, int defaultRarity, string sourceName, ExtendedDungeonPreferences dungeonPrefences = null, AudioClip firstTimeDungeonAudio = null)
         {
             ExtendedDungeonFlow extendedDungeonFlow = ScriptableObject.CreateInstance<ExtendedDungeonFlow>();
-            extendedDungeonFlow.Initialize(dungeon, firstTimeDungeonAudio, LevelType.Custom, "DEFAULTMODDED", newDungeonRarity: 300);
+
+            if (dungeonPrefences == null)
+                extendedDungeonFlow.extendedDungeonPreferences = ScriptableObject.CreateInstance<ExtendedDungeonPreferences>();
+            else
+                extendedDungeonFlow.extendedDungeonPreferences = dungeonPrefences;
+
+            extendedDungeonFlow.Initialize(dungeon, firstTimeDungeonAudio, ContentType.Custom, "sourceName", newDungeonRarity: defaultRarity);
             Dungeon.AddExtendedDungeonFlow(extendedDungeonFlow);
         }
-        /*public static void AddDungeon(DungeonFlow dungeon, int rarity, Levels.LevelTypes levelFlags, AudioClip firstTimeDungeonAudio = null)
-        {
-            customDungeons.Add(new CustomDungeon
-            {
-                dungeonFlow = dungeon,
-                rarity = 300,
-                LevelTypes = Levels.LevelTypes.All,
-                //rarity = rarity,
-                //LevelTypes = levelFlags,
-                firstTimeDungeonAudio = firstTimeDungeonAudio
-            });
-        }*/
 
-        /// <summary>
-        /// Adds a dungeon to the given levels.
-        /// </summary>
-        public static void AddDungeon(DungeonFlow dungeon, int rarity, Levels.LevelTypes levelFlags, string[] levelOverrides = null, AudioClip firstTimeDungeonAudio = null)
+        public static string debugString;
+
+        public static ExtendedDungeonFlowWithRarity[] GetValidExtendedDungeonFlows(ExtendedLevel extendedLevel)
         {
-            customDungeons.Add(new CustomDungeon
+            List<ExtendedDungeonFlowWithRarity> potentialExtendedDungeonFlowsList = new List<ExtendedDungeonFlowWithRarity>();
+            List<ExtendedDungeonFlowWithRarity> returnExtendedDungeonFlowsList = new List<ExtendedDungeonFlowWithRarity>();
+
+            debugString = "\n" + "Trying To Find All Matching DungeonFlows" + "\n";
+
+            if (extendedLevel.allowedDungeonTypes == ContentType.Custom || extendedLevel.allowedDungeonTypes == ContentType.Any)
+                foreach (ExtendedDungeonFlow customDungeonFlow in customDungeonFlowsList)
+                    potentialExtendedDungeonFlowsList.Add(new ExtendedDungeonFlowWithRarity(customDungeonFlow, customDungeonFlow.dungeonRarity));
+
+            if (extendedLevel.allowedDungeonTypes == ContentType.Vanilla || extendedLevel.allowedDungeonTypes == ContentType.Any)
+                foreach (ExtendedDungeonFlowWithRarity vanillaDungeonFlow in GetVanillaExtendedDungeonFlows(extendedLevel))
+                    potentialExtendedDungeonFlowsList.Add(vanillaDungeonFlow);
+
+            debugString += "Potential DungeonFlows Collected, List Below: " + "\n";
+
+            foreach (ExtendedDungeonFlowWithRarity debugDungeon in potentialExtendedDungeonFlowsList)
+                debugString += debugDungeon.extendedDungeonFlow.name + ", ";
+
+            debugString += "\n" + "\n";
+
+            foreach (ExtendedDungeonFlowWithRarity customDungeonFlow in new List<ExtendedDungeonFlowWithRarity>(potentialExtendedDungeonFlowsList))
+                if (MatchViaManualModList(extendedLevel, customDungeonFlow.extendedDungeonFlow, out int outRarity) == true)
+                {
+                    customDungeonFlow.rarity = outRarity;
+                    returnExtendedDungeonFlowsList.Add(customDungeonFlow);
+                    potentialExtendedDungeonFlowsList.Remove(customDungeonFlow);
+                    debugString += "Matched " + extendedLevel.NumberlessPlanetName + " With " + customDungeonFlow.extendedDungeonFlow.name + " Based On Manual Mods List!" + "\n";
+                }
+
+            foreach (ExtendedDungeonFlowWithRarity customDungeonFlow in new List<ExtendedDungeonFlowWithRarity>(potentialExtendedDungeonFlowsList))
+                if (MatchViaManualLevelList(extendedLevel, customDungeonFlow.extendedDungeonFlow, out int outRarity) == true)
+                {
+                    customDungeonFlow.rarity = outRarity;
+                    returnExtendedDungeonFlowsList.Add(customDungeonFlow);
+                    potentialExtendedDungeonFlowsList.Remove(customDungeonFlow);
+                    debugString += "Matched " + extendedLevel.NumberlessPlanetName + " With " + customDungeonFlow.extendedDungeonFlow.name + " Based On Manual Levels List!" + "\n";
+                }
+
+            foreach (ExtendedDungeonFlowWithRarity customDungeonFlow in new List<ExtendedDungeonFlowWithRarity>(potentialExtendedDungeonFlowsList))
+                if (MatchViaRoutePrice(extendedLevel, customDungeonFlow.extendedDungeonFlow, out int outRarity) == true)
+                {
+                    customDungeonFlow.rarity = outRarity;
+                    returnExtendedDungeonFlowsList.Add(customDungeonFlow);
+                    potentialExtendedDungeonFlowsList.Remove(customDungeonFlow);
+                    debugString += "Matched " + extendedLevel.NumberlessPlanetName + " With " + customDungeonFlow.extendedDungeonFlow.name + " Based On Dynamic Route Price Settings!" + "\n";
+                }
+
+
+            debugString += extendedLevel.NumberlessPlanetName + " Level Tags: ";
+            foreach (string tag in extendedLevel.levelTags)
+                debugString += tag + ", ";
+            debugString += "\n" + "\n";
+
+            foreach (ExtendedDungeonFlowWithRarity customDungeonFlow in new List<ExtendedDungeonFlowWithRarity>(potentialExtendedDungeonFlowsList))
             {
-                dungeonFlow = dungeon,
-                rarity = rarity,
-                LevelTypes = levelFlags,
-                firstTimeDungeonAudio = firstTimeDungeonAudio,
-                levelOverrides = levelOverrides
-            });
+                if (MatchViaLevelTags(extendedLevel, customDungeonFlow.extendedDungeonFlow, out int outRarity) == true)
+                {
+                    customDungeonFlow.rarity = outRarity;
+                    returnExtendedDungeonFlowsList.Add(customDungeonFlow);
+                    potentialExtendedDungeonFlowsList.Remove(customDungeonFlow);
+                    debugString += " - Matched " + extendedLevel.NumberlessPlanetName + " With " + customDungeonFlow.extendedDungeonFlow.name + " Based On Level Tags!" + "\n";
+                }
+                else
+                    debugString += "\n";
+            }
+
+            debugString += "\n" + "Matching DungeonFlows Collected, Count Is: " + returnExtendedDungeonFlowsList.Count + "\n";
+
+            DebugHelper.Log(debugString + "\n");
+
+            return (returnExtendedDungeonFlowsList.ToArray());
         }
+
+        //If Moon Accepts Vanilla Dungeons, Add All The Ones Added With ID In The SelectableLevel.
+        public static ExtendedDungeonFlowWithRarity[] GetVanillaExtendedDungeonFlows(ExtendedLevel extendedLevel)
+        {
+            List<ExtendedDungeonFlowWithRarity> returnExtendedDungeonFlowsList = new List<ExtendedDungeonFlowWithRarity>();
+
+            foreach (IntWithRarity intWithRarity in extendedLevel.selectableLevel.dungeonFlowTypes)
+                if (RoundManager.Instance.dungeonFlowTypes[intWithRarity.id] != null)
+                    if (Dungeon.TryGetExtendedDungeonFlow(RoundManager.Instance.dungeonFlowTypes[intWithRarity.id], out ExtendedDungeonFlow outExtendedDungeonFlow, ContentType.Vanilla))
+                        returnExtendedDungeonFlowsList.Add(new ExtendedDungeonFlowWithRarity(outExtendedDungeonFlow, intWithRarity.rarity));
+
+            return (returnExtendedDungeonFlowsList.ToArray());
+        }
+
+        public static bool MatchViaManualModList(ExtendedLevel extendedLevel, ExtendedDungeonFlow extendedDungeonFlow, out int rarity)
+        {
+            rarity = extendedDungeonFlow.dungeonRarity;
+
+            foreach (StringWithRarity stringWithRarity in extendedDungeonFlow.extendedDungeonPreferences.manualLevelSourceReferenceList)
+                if (stringWithRarity.name.Contains(extendedLevel.sourceName))
+                {
+                    rarity = (int)stringWithRarity.spawnChance;
+                    return (true);
+                }
+
+            return (false);
+        }
+
+        public static bool MatchViaManualLevelList(ExtendedLevel extendedLevel, ExtendedDungeonFlow extendedDungeonFlow, out int rarity)
+        {
+            rarity = extendedDungeonFlow.dungeonRarity;
+
+            foreach (StringWithRarity stringWithRarity in extendedDungeonFlow.extendedDungeonPreferences.manualLevelNameReferenceList)
+                if (stringWithRarity.name.Contains(extendedLevel.NumberlessPlanetName))
+                {
+                    rarity = (int)stringWithRarity.spawnChance;
+                    return (true);
+                }
+
+            return (false);
+        }
+
+        public static bool MatchViaRoutePrice(ExtendedLevel extendedLevel, ExtendedDungeonFlow extendedDungeonFlow, out int rarity)
+        {
+            rarity = extendedDungeonFlow.dungeonRarity;
+
+            foreach (Vector2WithRarity vectorWithRarity in extendedDungeonFlow.extendedDungeonPreferences.dynamicRoutePricesList)
+            {
+                if ((extendedLevel.levelCost >= vectorWithRarity.min) && (extendedLevel.levelCost <= vectorWithRarity.max))
+                {
+                    rarity = vectorWithRarity.rarity;
+                    return (true);
+                }
+            }
+
+
+            return (false);
+        }
+
+        public static bool MatchViaLevelTags(ExtendedLevel extendedLevel, ExtendedDungeonFlow extendedDungeonFlow, out int rarity)
+        {
+            rarity = extendedDungeonFlow.dungeonRarity;
+
+            debugString += extendedDungeonFlow.name + " Level Tags: ";
+
+            foreach (StringWithRarity stringWithRarity in extendedDungeonFlow.extendedDungeonPreferences.levelTagsList)
+                debugString += stringWithRarity.name + ", ";
+
+            foreach (string levelTag in extendedLevel.levelTags)
+                foreach (StringWithRarity stringWithRarity in extendedDungeonFlow.extendedDungeonPreferences.levelTagsList)
+                    if (stringWithRarity.name.Contains(levelTag))
+                    {
+                        rarity = (int)stringWithRarity.spawnChance;
+                        return (true);
+                    }
+
+            return (false);
+        }
+
+
     }
 }

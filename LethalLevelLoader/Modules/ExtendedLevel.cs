@@ -8,10 +8,18 @@ using System.Linq;
 using System.Text;
 using UnityEngine;
 
-public enum LevelType { Vanilla, Custom, Any } //Any included for built in checks.
+public enum ContentType { Vanilla, Custom, Any } //Any & All included for built in checks.
 
 namespace LethalLevelLoader.Modules
 {
+    [System.Serializable]
+    public class TerminalData
+    {
+        TerminalKeyword terminalKeyword;
+        TerminalNode terminalRouteNode;
+        TerminalNode terminalRouteConfirmNode;
+        TerminalNode terminalInfoNode;
+    }
 
     [CreateAssetMenu(menuName = "LethalLib/ExtendedLevel")]
     public class ExtendedLevel : ScriptableObject
@@ -19,17 +27,18 @@ namespace LethalLevelLoader.Modules
         public SelectableLevel selectableLevel;
         public GameObject levelPrefab;
 
-        public LevelType levelType;
+        public ContentType levelType;
         public string sourceName = "Lethal Company"; //Levels from AssetBundles will have this as their Assembly Name.
         public string NumberlessPlanetName => GetNumberlessPlanetName(selectableLevel);
         public int fireExitsAmount = 0;
-        public bool enableCustomDungeonInjection = true;
+        public int levelCost = 0; //Hotfix, this needs to be replaced later.
+        public ContentType allowedDungeonTypes = ContentType.Any;
         //public List<(DungeonFlow, IntWithRarity)> dungeonFlowsList = new List<(DungeonFlow, IntWithRarity)>();
         public List<ExtendedDungeonFlowWithRarity> extendedDungeonFlowsList = new List<ExtendedDungeonFlowWithRarity>();
 
         public List<string> levelTags = new List<string>();
 
-        public void Initialize(SelectableLevel newSelectableLevel, LevelType newLevelType, bool generateTerminalAssets, GameObject newLevelPrefab = null, string newSourceName = "Lethal Company")
+        public void Initialize(SelectableLevel newSelectableLevel, ContentType newLevelType, bool generateTerminalAssets, GameObject newLevelPrefab = null, string newSourceName = "Lethal Company")
         {
             DebugHelper.Log("Creating New Extended Level For Moon: " + ExtendedLevel.GetNumberlessPlanetName(newSelectableLevel));
             levelType = newLevelType;
@@ -37,7 +46,7 @@ namespace LethalLevelLoader.Modules
             sourceName = newSourceName;
 
 
-            if (newLevelType == LevelType.Custom)
+            if (newLevelType == ContentType.Custom)
             {
                 levelPrefab = newLevelPrefab;
                 levelTags.Add("Custom");
