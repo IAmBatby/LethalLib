@@ -1,5 +1,6 @@
 ﻿using DunGen;
 using DunGen.Graph;
+using HarmonyLib;
 using LethalLevelLoader.Extras;
 using System;
 using System.Collections.Generic;
@@ -9,79 +10,37 @@ using System.Text;
 using System.Xml.Linq;
 using Unity.Netcode;
 using UnityEngine;
+using UnityEngine.SceneManagement;
+using static DunGen.Graph.DungeonFlow;
+using Random = System.Random;
 //using static LethalLib.Modules.Items;
 
 namespace LethalLevelLoader.Modules
 {
+    [System.Serializable]
+    public class ExtendedDungeonFlowWithRarity
+    {
+        public ExtendedDungeonFlow extendedDungeonFlow;
+        public int rarity;
+
+        public ExtendedDungeonFlowWithRarity(ExtendedDungeonFlow newExtendedDungeonFlow, int newRarity)
+        {
+            extendedDungeonFlow = newExtendedDungeonFlow;
+            rarity = newRarity;
+        }
+    }
+    
     public class Dungeon
     {
-        public static void Init()
-        {
-            //On.RoundManager.GenerateNewFloor += RoundManager_GenerateNewFloor;
-            //On.RoundManager.Start += RoundManager_Start;
-            //On.StartOfRound.Start += StartOfRound_Start;
-        }
+        public static List<CustomDungeonArchetype> customDungeonArchetypes = new List<CustomDungeonArchetype>();
+        public static List<CustomGraphLine> customGraphLines = new List<CustomGraphLine>();
+        public static Dictionary<string, TileSet> extraTileSets = new Dictionary<string, TileSet>();
+        public static Dictionary<string, GameObjectChance> extraRooms = new Dictionary<string, GameObjectChance>();
+        public static List<CustomDungeon> customDungeons = new List<CustomDungeon>();
 
-        /*private static void StartOfRound_Start(On.StartOfRound.orig_Start orig, StartOfRound self)
-        {
-
-
-            foreach (var dungeon in customDungeons)
-            {
-                foreach (var level in self.levels)
-                {
-                    var name = level.name;
-                    var alwaysValid = dungeon.LevelTypes.HasFlag(Levels.LevelTypes.All) || (dungeon.levelOverrides != null && dungeon.levelOverrides.Any(item => item.ToLowerInvariant() == name.ToLowerInvariant()));
-
-                    if (Enum.IsDefined(typeof(Levels.LevelTypes), name) || alwaysValid)
-                    {
-                        var levelEnum = alwaysValid ? Levels.LevelTypes.All : (Levels.LevelTypes)Enum.Parse(typeof(Levels.LevelTypes), name);
-
-                        if ((alwaysValid || dungeon.LevelTypes.HasFlag(levelEnum)) && !level.dungeonFlowTypes.Any(rarityInt => rarityInt.id == dungeon.dungeonIndex))
-                        {
-                            var flowTypes = level.dungeonFlowTypes.ToList();
-                            flowTypes.Add(new IntWithRarity { id = dungeon.dungeonIndex, rarity = dungeon.rarity });
-                            level.dungeonFlowTypes = flowTypes.ToArray();
-                        }
-                    }
-                }
-            }
-
-            Plugin.logger.LogInfo("Added custom dungeons to levels");
-            orig(self);
-        }*/
-
-        /*private static void RoundManager_Start(On.RoundManager.orig_Start orig, RoundManager self)
-        {
-            foreach(var dungeon in customDungeons)
-            {
-                if (!self.dungeonFlowTypes.Contains(dungeon.dungeonFlow))
-                {
-                    var flowTypes = self.dungeonFlowTypes.ToList();
-                    flowTypes.Add(dungeon.dungeonFlow);
-                    self.dungeonFlowTypes = flowTypes.ToArray();
-
-                    var newDungeonIndex = self.dungeonFlowTypes.Length - 1;
-                    dungeon.dungeonIndex = newDungeonIndex;
-
-                    var firstTimeDungeonAudios = self.firstTimeDungeonAudios.ToList();
-                    // check if the indexes match
-                    if (firstTimeDungeonAudios.Count != self.dungeonFlowTypes.Length - 1)
-                    {
-                        // add nulls until they do
-                        while (firstTimeDungeonAudios.Count < self.dungeonFlowTypes.Length - 1)
-                        {
-                            firstTimeDungeonAudios.Add(null);
-                        }
-                    }
-                    firstTimeDungeonAudios.Add(dungeon.firstTimeDungeonAudio);
-                    self.firstTimeDungeonAudios = firstTimeDungeonAudios.ToArray();
-                }
-            }
-
-
-            orig(self);
-        }*/
+        public static List<ExtendedDungeonFlow> allExtendedDungeonsList = new List<ExtendedDungeonFlow>();
+        public static List<ExtendedDungeonFlow> vanillaDungeonFlowsList = new List<ExtendedDungeonFlow>();
+        public static List<ExtendedDungeonFlow> customDungeonFlowsList = new List<ExtendedDungeonFlow>();
 
         public class CustomDungeonArchetype
         {
@@ -106,241 +65,153 @@ namespace LethalLevelLoader.Modules
             public AudioClip firstTimeDungeonAudio;
         }
 
-        public static List<CustomDungeonArchetype> customDungeonArchetypes = new List<CustomDungeonArchetype>();
-        public static List<CustomGraphLine> customGraphLines = new List<CustomGraphLine>();
-        public static Dictionary<string, TileSet> extraTileSets = new Dictionary<string, TileSet>();
-        public static Dictionary<string, GameObjectChance> extraRooms = new Dictionary<string, GameObjectChance>();
-        public static List<CustomDungeon> customDungeons = new List<CustomDungeon>();
-
-        //private static void RoundManager_GenerateNewFloor(On.RoundManager.orig_GenerateNewFloor orig, RoundManager self)
-        public static void PrePatchNewFloor(RoundManager self)
+        public static void AddExtendedDungeonFlow(ExtendedDungeonFlow extendedDungeonFlow)
         {
-            var name = self.currentLevel.name;
+            DebugHelper.Log("Adding Dungeon Flow: " + extendedDungeonFlow.dungeonFlow.name);
+            if (extendedDungeonFlow.dungeonType == LevelType.Custom)
+                customDungeonFlowsList.Add(extendedDungeonFlow);
+            else
+                vanillaDungeonFlowsList.Add(extendedDungeonFlow);
 
-                var index = 0;
-                self.dungeonGenerator.Generator.DungeonFlow.Lines.ForEach((line) =>
-                {
-                    foreach (var dungeonArchetype in customDungeonArchetypes)
-                    {
-                        if (!line.DungeonArchetypes.Contains(dungeonArchetype.archeType) && (dungeonArchetype.lineIndex == -1 || dungeonArchetype.lineIndex == index)) { 
-                            line.DungeonArchetypes.Add(dungeonArchetype.archeType);
-                            Plugin.logger.LogInfo($"Added {dungeonArchetype.archeType.name} to {name}");
-                        }
-                    }
+            allExtendedDungeonsList.Add(extendedDungeonFlow);
+        }
 
-                    foreach (var archetype in line.DungeonArchetypes)
-                    {
-                        var archetypeName = archetype.name;
-                        if (extraTileSets.ContainsKey(archetypeName))
-                        {
-                            var tileSet = extraTileSets[archetypeName];
+        public static ExtendedDungeonFlowWithRarity[] GetValidExtendedDungeonFlows(ExtendedLevel extendedLevel)
+        {
+            List<ExtendedDungeonFlowWithRarity> initialReturnExtendedDungeonFlowsList = new List<ExtendedDungeonFlowWithRarity>();
+            List<ExtendedDungeonFlowWithRarity> returnExtendedDungeonFlowsList = new List<ExtendedDungeonFlowWithRarity>();
 
-                            if (!archetype.TileSets.Contains(tileSet))
-                            {
-                                archetype.TileSets.Add(tileSet);
-                                Plugin.logger.LogInfo($"Added {tileSet.name} to {name}");
-                            }
-                        }
-                        foreach (var tileSet in archetype.TileSets)
-                        {
-                            var tileSetName = tileSet.name;
-                            if (extraRooms.ContainsKey(tileSetName))
-                            {
-                                var room = extraRooms[tileSetName];
-                                if (!tileSet.TileWeights.Weights.Contains(room))
-                                {
-                                    tileSet.TileWeights.Weights.Add(room);
-                                }
-                            }
-                        }
-                    }
-
-                    index++;
-                });
-
-
-                foreach (var graphLine in customGraphLines)
-                {
-                        if (!self.dungeonGenerator.Generator.DungeonFlow.Lines.Contains(graphLine.graphLine))
-                        {
-                            self.dungeonGenerator.Generator.DungeonFlow.Lines.Add(graphLine.graphLine);
-                           // Plugin.logger.LogInfo($"Added {graphLine.graphLine.name} to {name}");
-                        }
-                }
+            foreach (IntWithRarity intWithRarity in extendedLevel.selectableLevel.dungeonFlowTypes)
+                if (RoundManager.Instance.dungeonFlowTypes[intWithRarity.id] != null)
+                    if (Dungeon.TryGetExtendedDungeonFlow(RoundManager.Instance.dungeonFlowTypes[intWithRarity.id], out ExtendedDungeonFlow outExtendedDungeonFlow, LevelType.Vanilla))
+                        returnExtendedDungeonFlowsList.Add(new ExtendedDungeonFlowWithRarity(outExtendedDungeonFlow, intWithRarity.rarity));
             
-            //orig(self);
+            foreach (ExtendedDungeonFlow customDungeonFlow in customDungeonFlowsList)
+                initialReturnExtendedDungeonFlowsList.Add(new ExtendedDungeonFlowWithRarity(customDungeonFlow, customDungeonFlow.dungeonRarity));
 
-            // register prefabs
 
-            /*var networkManager = UnityEngine.Object.FindObjectOfType<NetworkManager>();
+            foreach (ExtendedDungeonFlowWithRarity returnDungeonFlow in initialReturnExtendedDungeonFlowsList)
+                foreach (string levelTag in extendedLevel.levelTags)
+                    if (returnDungeonFlow.extendedDungeonFlow.extendedDungeonPreferences.targetedLevelTags.Contains(levelTag))
+                        returnExtendedDungeonFlowsList.Add(returnDungeonFlow);
 
-            RandomMapObject[] array = UnityEngine.Object.FindObjectsOfType<RandomMapObject>();
 
-            foreach (RandomMapObject randomMapObject in array)
+            return (returnExtendedDungeonFlowsList.ToArray());
+        }
+
+        [HarmonyPatch(typeof(DungeonGenerator), "Generate")]
+        [HarmonyPrefix]
+        public static void Generate_Prefix(DungeonGenerator __instance)
+        {
+            DebugHelper.Log("Started To Prefix Patch DungeonGenerator Generate!");
+
+            if (Levels.TryGetExtendedLevel(RoundManager.Instance.currentLevel, out ExtendedLevel extendedLevel))
             {
-                // loop through
-                for(int i = 0; i < randomMapObject.spawnablePrefabs.Count; i++)
-                {
-                    // get prefab name
-                    var prefabName = randomMapObject.spawnablePrefabs[i].name;
+                Scene scene = RoundManager.Instance.dungeonGenerator.gameObject.scene;
 
-                    var prefab = networkManager.NetworkConfig.Prefabs.m_Prefabs.First(x => x.Prefab.name == prefabName);
-
-                    if (prefab != null && prefab.Prefab != randomMapObject.spawnablePrefabs[i])
-                    {
-                        randomMapObject.spawnablePrefabs[i] = prefab.Prefab;
-                    }
-                }
-            }*/
+                SetDungeonFlow(__instance, extendedLevel);
+                PatchFireEscapes(__instance, extendedLevel, scene);
 
 
-                // debug copy of GenerateNewFloor
-                
-                /*if (!self.hasInitializedLevelRandomSeed)
-                {
-                    self.hasInitializedLevelRandomSeed = true;
-                    self.InitializeRandomNumberGenerators();
-                }
-                if (self.currentLevel.dungeonFlowTypes != null && self.currentLevel.dungeonFlowTypes.Length != 0)
-                {
-                    List<int> list = new List<int>();
-                    for (int i = 0; i < self.currentLevel.dungeonFlowTypes.Length; i++)
-                    {
-                        list.Add(self.currentLevel.dungeonFlowTypes[i].rarity);
-                    }
-                    int id = self.currentLevel.dungeonFlowTypes[self.GetRandomWeightedIndex(list.ToArray(), self.LevelRandom)].id;
-
-                    Plugin.logger.LogInfo($"Dungeon flow id: {id}");
-                    Plugin.logger.LogInfo($"Dungeon flow count: {self.dungeonFlowTypes.Length}");
-                    Plugin.logger.LogInfo($"Dungeon flow name: {self.dungeonFlowTypes[id].name}");
-
-                    self.dungeonGenerator.Generator.DungeonFlow = self.dungeonFlowTypes[id];
-                    if (id < self.firstTimeDungeonAudios.Length && self.firstTimeDungeonAudios[id] != null)
-                    {
-                        EntranceTeleport[] array = UnityEngine.Object.FindObjectsOfType<EntranceTeleport>();
-                        if (array != null && array.Length != 0)
-                        {
-                            for (int j = 0; j < array.Length; j++)
-                            {
-                                if (array[j].isEntranceToBuilding)
-                                {
-                                    array[j].firstTimeAudio = self.firstTimeDungeonAudios[id];
-                                    array[j].dungeonFlowId = id;
-                                }
-                            }
-                        }
-                    }
-                }
-                self.dungeonGenerator.Generator.ShouldRandomizeSeed = false;
-                self.dungeonGenerator.Generator.Seed = self.LevelRandom.Next();
-                Debug.Log($"GenerateNewFloor(). Map generator's random seed: {self.dungeonGenerator.Generator.Seed}");
-                self.dungeonGenerator.Generator.LengthMultiplier = self.currentLevel.factorySizeMultiplier * self.mapSizeMultiplier;
-                self.dungeonGenerator.Generate();*/
-                
+                //LevelLoader.SyncLoadedLevel(scene);
+            }
         }
 
-        /// <summary>
-        /// Registers a custom archetype to a level.
-        /// </summary>
-        public static void AddArchetype(DungeonArchetype archetype, Levels.LevelTypes levelFlags, int lineIndex = -1)
+        [HarmonyPatch(typeof(DungeonGenerator), "Generate")]
+        [HarmonyPostfix]
+        public static void Generate_Postfix(DungeonGenerator __instance)
         {
-            var customArchetype = new CustomDungeonArchetype();
-            customArchetype.archeType = archetype;
-            customArchetype.LevelTypes = levelFlags;
-            customArchetype.lineIndex = lineIndex;
-            customDungeonArchetypes.Add(customArchetype);
+            DebugHelper.Log("Started To Postfix Patch DungeonGenerator Generate!");
         }
 
-        /// <summary>
-        /// Registers a dungeon graphline to a level.
-        /// </summary>
-        public static void AddLine(GraphLine line, Levels.LevelTypes levelFlags)
+        public static void SetDungeonFlow(DungeonGenerator dungeonGenerator, ExtendedLevel extendedLevel)
         {
-            var customLine = new CustomGraphLine();
-            customLine.graphLine = line;
-            customLine.LevelTypes = levelFlags;
-            customGraphLines.Add(customLine);
-        }
+            DebugHelper.Log("Setting DungeonFlow!");
+            RoundManager roundManager = RoundManager.Instance;
 
-        /// <summary>
-        /// Registers a dungeon graphline to a level.
-        /// </summary>
-        public static void AddLine(DungeonGraphLineDef line, Levels.LevelTypes levelFlags)
-        {
-            AddLine(line.graphLine, levelFlags);
-        }
+            Random levelRandom = RoundManager.Instance.LevelRandom;
 
-        /// <summary>
-        /// Adds a tileset to a dungeon archetype
-        /// </summary>
-        public static void AddTileSet(TileSet set, string archetypeName)
-        {
-            extraTileSets.Add(archetypeName, set);
-        }
+            int randomisedDungeonIndex = -1;
 
-        /// <summary>
-        /// Adds a room to a tileset with the given name.
-        /// </summary>
-        public static void AddRoom(GameObjectChance room, string tileSetName)
-        {
-            extraRooms.Add(tileSetName, room);
-        }
+            List<int> randomWeightsList = new List<int>();
+            string debugString = "Current Level + (" + extendedLevel.NumberlessPlanetName + ") Weights List: " + "\n" + "\n";
 
-        /// <summary>
-        /// Adds a room to a tileset with the given name.
-        /// </summary>
-        public static void AddRoom(GameObjectChanceDef room, string tileSetName)
-        {
-            AddRoom(room.gameObjectChance, tileSetName);
-        }
+            List<ExtendedDungeonFlowWithRarity> availableExtendedFlowsList = GetValidExtendedDungeonFlows(extendedLevel).ToList();
 
-        /// <summary>
-        /// Adds a dungeon to the given levels.
-        /// </summary>
-        public static void AddDungeon(DungeonDef dungeon, Levels.LevelTypes levelFlags)
-        {
-            AddDungeon(dungeon.dungeonFlow, dungeon.rarity, levelFlags, dungeon.firstTimeDungeonAudio); 
-        }
+            foreach (ExtendedDungeonFlowWithRarity extendedDungeon in availableExtendedFlowsList)
+                randomWeightsList.Add(extendedDungeon.rarity);
 
-        /// <summary>
-        /// Adds a dungeon to the given levels.
-        /// </summary>
-        public static void AddDungeon(DungeonDef dungeon, Levels.LevelTypes levelFlags, string[] levelOverrides)
-        {
-            AddDungeon(dungeon.dungeonFlow, dungeon.rarity, levelFlags, levelOverrides, dungeon.firstTimeDungeonAudio);
-        }
+            randomisedDungeonIndex = roundManager.GetRandomWeightedIndex(randomWeightsList.ToArray(), levelRandom);
 
-        /// <summary>
-        /// Adds a dungeon to the given levels.
-        /// </summary>
-        public static void AddDungeon(DungeonFlow dungeon, int rarity, Levels.LevelTypes levelFlags, AudioClip firstTimeDungeonAudio = null)
-        {
-            customDungeons.Add(new CustomDungeon
+            foreach (ExtendedDungeonFlowWithRarity extendedDungeon in availableExtendedFlowsList)
             {
-                dungeonFlow = dungeon,
-                rarity = 300,
-                LevelTypes = Levels.LevelTypes.All,
-                //rarity = rarity,
-                //LevelTypes = levelFlags,
-                firstTimeDungeonAudio = firstTimeDungeonAudio
-            });
+                debugString += extendedDungeon.extendedDungeonFlow.dungeonFlow.name + " | " + extendedDungeon.rarity;
+                if (extendedDungeon.extendedDungeonFlow == availableExtendedFlowsList[randomisedDungeonIndex].extendedDungeonFlow)
+                    debugString += " - Selected DungeonFlow" + "\n";
+                else
+                    debugString += "\n";
+            }
+
+            DebugHelper.Log(debugString + "\n");
+
+            dungeonGenerator.DungeonFlow = availableExtendedFlowsList[randomisedDungeonIndex].extendedDungeonFlow.dungeonFlow;
+
+
+
         }
 
-        /// <summary>
-        /// Adds a dungeon to the given levels.
-        /// </summary>
-        public static void AddDungeon(DungeonFlow dungeon, int rarity, Levels.LevelTypes levelFlags, string[] levelOverrides = null, AudioClip firstTimeDungeonAudio = null)
+        [HarmonyPatch(typeof(DungeonProxy), "AddTile")]
+        [HarmonyPostfix]
+        public static void TilePrefix(DungeonProxy __instance, TileProxy tile)
         {
-            customDungeons.Add(new CustomDungeon
-            {
-                dungeonFlow = dungeon,
-                rarity = rarity,
-                LevelTypes = levelFlags,
-                firstTimeDungeonAudio = firstTimeDungeonAudio,
-                levelOverrides = levelOverrides
-            });
+            DebugHelper.Log("Tile Spawning: " + tile.Prefab.name);
         }
 
-        // TODO: Allow runtime removal to let people have synced configs (I do not want to implement this because it is a hassle.)
+        public static void PatchFireEscapes(DungeonGenerator dungeonGenerator, ExtendedLevel extendedLevel, Scene scene)
+        {
+            DebugHelper.Log("Patching Fire Escapes!");
+            List<EntranceTeleport> entranceTeleports = new List<EntranceTeleport>();
+            int fireEscapesAmount = -1;
+
+            foreach (GameObject rootObject in scene.GetRootGameObjects())
+                foreach (EntranceTeleport entranceTeleport in rootObject.GetComponentsInChildren<EntranceTeleport>())
+                {
+                    fireEscapesAmount++;
+                    entranceTeleport.dungeonFlowId = 5;
+                    entranceTeleport.firstTimeAudio = RoundManager.Instance.firstTimeDungeonAudios[0];
+                }
+
+
+
+            foreach (GlobalPropSettings globalPropSettings in dungeonGenerator.DungeonFlow.GlobalProps)
+                if (globalPropSettings.ID == 1231)
+                    globalPropSettings.Count = new IntRange(fireEscapesAmount, fireEscapesAmount);
+        }
+
+        public static bool TryGetExtendedDungeonFlow(DungeonFlow dungeonFlow, out ExtendedDungeonFlow returnExtendedDungeonFlow, LevelType levelType = LevelType.Any)
+        {
+            returnExtendedDungeonFlow = null;
+            List<ExtendedDungeonFlow> extendedDungeonFlowsList = new List<ExtendedDungeonFlow>();
+
+            switch (levelType)
+            {
+                case LevelType.Vanilla:
+                    extendedDungeonFlowsList = vanillaDungeonFlowsList;
+                    break;
+                case LevelType.Custom:
+                    extendedDungeonFlowsList = customDungeonFlowsList;
+                    break;
+                case LevelType.Any:
+                    extendedDungeonFlowsList = allExtendedDungeonsList;
+                    break;
+            }
+
+            foreach (ExtendedDungeonFlow extendedDungeonFlow in extendedDungeonFlowsList)
+                if (extendedDungeonFlow.dungeonFlow == dungeonFlow)
+                    returnExtendedDungeonFlow = extendedDungeonFlow;
+
+            return (returnExtendedDungeonFlow != null);
+        }
+
     }
 }

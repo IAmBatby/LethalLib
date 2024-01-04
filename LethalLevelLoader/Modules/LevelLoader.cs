@@ -93,13 +93,16 @@ public class LevelLoader
             foreach (GameObject rootObject in SceneManager.GetSceneAt(i).GetRootGameObjects())
                 ContentExtractor.TryExtractAudioMixerGroups(rootObject.GetComponentsInChildren<AudioSource>());
 
+        DebugHelper.Log("OnLoadComplete. CurrentLevelSceneName: " + RoundManager.Instance.currentLevel.sceneName + " | " + "InjectionSceneName: " + Levels.injectionSceneName);
+
         if (SceneManager.GetSceneByName("SampleSceneRelay") != null)
             PreloadTerrainShader();
         if (SceneManager.GetSceneByName("MainMenu") != null) //IsInGame check to stop us from trying to inject before the intended InitSceneLaunchOptions usage.
             isInGame = true;
-        if (SceneManager.GetSceneByName("Level4March") != null)
+        if (SceneManager.GetSceneByName(Levels.injectionSceneName) != null)
             if (isInGame == true)
-                InjectCustomMoon(SceneManager.GetSceneByName("Level4March"), true);
+                if (RoundManager.Instance.currentLevel.sceneName == Levels.injectionSceneName)
+                    InjectCustomMoon(SceneManager.GetSceneByName(Levels.injectionSceneName), true);
     }
 
     public static void InjectCustomMoon(Scene scene, bool disableTerrainOnFirstFrame = false)
@@ -121,7 +124,7 @@ public class LevelLoader
                     {
                         SceneManager.MoveGameObjectToScene(mainPrefab, scene); //We move and detatch to replicate vanilla moon scene hierarchy.
 
-                        SyncLoadedLevel(mainPrefab);
+                        //SyncLoadedLevel(mainPrefab.scene);
 
                         //mainPrefab.transform.DetachChildren();
                         //mainPrefab.SetActive(false);
@@ -146,119 +149,35 @@ public class LevelLoader
         { childNetworkObject = newChildNetworkObject;  childObject = newChildGameObject; childParentTransform = newIntendedParent; }
     }
 
-    public static void SyncLoadedLevel(GameObject levelPrefab)
-    {
-        List<CachedChildedNetworkObjectData> cachedNetworkObjectParentList = new List<CachedChildedNetworkObjectData>();
-        List<NetworkObject> networkObjectsList = new List<NetworkObject>(levelPrefab.GetComponentsInChildren<NetworkObject>());
-
-        foreach (NetworkObject networkObject in new List<NetworkObject>(networkObjectsList))
-            cachedNetworkObjectParentList.Add(new CachedChildedNetworkObjectData(networkObject.gameObject, networkObject.transform.parent, networkObject));
-
-        foreach (CachedChildedNetworkObjectData cachedNetworkChild in cachedNetworkObjectParentList)
-        {
-            DebugHelper.Log("Attempting To Parent & Spawn: " + cachedNetworkChild.childObject.name);
-            //cachedNetworkChild.childObject.transform.SetParent(null);
-            cachedNetworkChild.childNetworkObject.Spawn();
-            //cachedNetworkChild.childNetworkObject.TrySetParent(cachedNetworkChild.childParentTransform);
-        }
-    }
-
-    public static List<(GlobalPropSettings, IntRange)> cachedGlobalPropList = new List<(GlobalPropSettings, IntRange)>();
-    public static List<DungeonFlow> cachedManagerDungeonFlowTypes = new List<DungeonFlow>();
-    public static List<IntWithRarity> cachedLevelDungeonFlowTypes = new List<IntWithRarity>();
-
-    [HarmonyPatch(typeof(RoundManager), "GenerateNewFloor")]
+    [HarmonyPatch(typeof(RoundManager), "SpawnSyncedProps")]
     [HarmonyPrefix]
-    public static void GenerateNewFloor_PreFix(RoundManager __instance)
+    public static void SpawnedSyncedProps_Prefix()
     {
-        RoundManager roundManager = __instance;
-        RuntimeDungeon runtimeDungeon = UnityEngine.Object.FindObjectOfType<RuntimeDungeon>(false);
-        List<DungeonFlow> dynamicManagerDungeonFlows;
-        List<IntWithRarity> dynamicLevelDungeonFlows;
+        DebugHelper.Log("SpawnSyncedProps Debug: MapPropsContainer Is: " + (GameObject.FindGameObjectWithTag("MapPropsContainer") != null));
+        DebugHelper.Log("SpawnSyncedProps Debug: SpawnSyncedObject Array Length Is: " + UnityEngine.Object.FindObjectsOfType<SpawnSyncedObject>().Length);
 
+        int counter1 = 0;
+        int counter2 = 0;
 
-        //Inject Custom Dungeons
-
-        cachedManagerDungeonFlowTypes = new List<DungeonFlow>(roundManager.dungeonFlowTypes);
-        cachedLevelDungeonFlowTypes = new List<IntWithRarity>(roundManager.currentLevel.dungeonFlowTypes);
-        //dynamicManagerDungeonFlows = new List<DungeonFlow>(roundManager.dungeonFlowTypes);
-        dynamicManagerDungeonFlows = new List<DungeonFlow>();
-        //dynamicLevelDungeonFlows = new List<IntWithRarity>(roundManager.currentLevel.dungeonFlowTypes);
-        dynamicLevelDungeonFlows = new List<IntWithRarity>();
-
-        DebugHelper.Log("RoundManager DungeonFlows Pre Patch: " + "\n" + DebugHelper.GetDungeonFlowsLog(dynamicManagerDungeonFlows));
-        DebugHelper.Log("CurrentLevel DungeonFlows Count Pre Patch: " + "\n" + dynamicLevelDungeonFlows.Count);
-
-
-        roundManager.currentLevel.dungeonFlowTypes = null;
-
-        foreach (CustomDungeon dungeon in customDungeons)
+        foreach (SpawnSyncedObject spawnSyncedObject in UnityEngine.Object.FindObjectsOfType<SpawnSyncedObject>())
         {
-            dynamicManagerDungeonFlows.Add(dungeon.dungeonFlow);
-            IntWithRarity newInt = new IntWithRarity();
-            newInt.id = dynamicLevelDungeonFlows.Count;
-            newInt.rarity = dungeon.rarity;
-            dynamicLevelDungeonFlows.Add(newInt);
+            DebugHelper.Log("SpawnSyncedProp: " + spawnSyncedObject.name + " | " + spawnSyncedObject.spawnPrefab.name);
+            if (spawnSyncedObject.spawnPrefab == null)
+                counter1++;
+            if (spawnSyncedObject.GetComponent<NetworkObject>() == null)
+                counter2 ++;
         }
 
-        roundManager.dungeonFlowTypes = dynamicManagerDungeonFlows.ToArray();
-        roundManager.currentLevel.dungeonFlowTypes = dynamicLevelDungeonFlows.ToArray();
+        DebugHelper.Log("SpawnSyncedProps Debug: Number Of SpawnSyncedObject's Missing A SpawnPrefab Is: " + counter1);
+        DebugHelper.Log("SpawnSyncedProps Debug: Number Of SpawnSyncedObject's Missing A NetworkObject Is: " + counter1);
 
-        DebugHelper.Log("RoundManager DungeonFlows Post Patch: " + "\n" + DebugHelper.GetDungeonFlowsLog(dynamicManagerDungeonFlows));
-        DebugHelper.Log("CurrentLevel DungeonFlows Count Post Patch: " + "\n" + dynamicLevelDungeonFlows.Count);
-
-        LethalLevelLoader.Modules.Dungeon.PrePatchNewFloor(roundManager);
-
-        //Fix Fire Escapes
-        if (Levels.TryGetExtendedLevel(StartOfRound.Instance.currentLevel, out ExtendedLevel extendedLevel))
-            if (extendedLevel.levelPrefab != null && runtimeDungeon != null && roundManager != null)
-                    foreach (DungeonFlow dungeonFlow in roundManager.dungeonFlowTypes)
-                        foreach (GlobalPropSettings globalProp in dungeonFlow.GlobalProps)
-                            if (globalProp.ID == 1231)
-                            {
-                                cachedGlobalPropList.Add((globalProp, new IntRange(globalProp.Count.Min, globalProp.Count.Max)));
-                                //globalProp.Count = new IntRange(extendedLevel.fireExitsAmount, extendedLevel.fireExitsAmount);
-                            }
     }
 
     [HarmonyPatch(typeof(RoundManager), "GenerateNewFloor")]
     [HarmonyPostfix]
     public static void GenerateNewFloor_PostFix()
     {
-        RoundManager.Instance.dungeonFlowTypes = cachedManagerDungeonFlowTypes.ToArray();
-        RoundManager.Instance.currentLevel.dungeonFlowTypes = cachedLevelDungeonFlowTypes.ToArray();
-
-        cachedLevelDungeonFlowTypes.Clear();
-        cachedManagerDungeonFlowTypes.Clear();
-
-
-
-        foreach ((GlobalPropSettings, IntRange) cachedGlobalProp in cachedGlobalPropList)
-            cachedGlobalProp.Item1.Count = cachedGlobalProp.Item2;
-
-        cachedGlobalPropList.Clear();
-
-        Scene scene = SceneManager.GetSceneByName("Level4March");
-
-        List<NetworkAnimator> networkAnimatorList = new List<NetworkAnimator>();
-
-        foreach (GameObject rootObject in scene.GetRootGameObjects())
-            foreach (NetworkAnimator networkAnimator in rootObject.GetComponentsInChildren<NetworkAnimator>())
-            {
-                DebugHelper.Log("Found Illegal NetworkAnimator On GameObject: " + networkAnimator.gameObject.name);
-                networkAnimatorList.Add(networkAnimator);
-            }
-
-        for (int i = networkAnimatorList.Count; i > 0; i++)
-        {
-            GameObject gameObject = networkAnimatorList[i].gameObject;
-            UnityEngine.Object.DestroyImmediate(networkAnimatorList[i]);
-            gameObject.AddComponent<NetworkObject>().Spawn();
-        }
-
         RoundManager.Instance.currentLevel.spawnableMapObjects = Array.Empty<SpawnableMapObject>();
-
-        //TrySyncLoadedLevel(RoundManager.Instance.dungeonGenerator.ga);
     }
 
     public static void DisableTerrain() //Jank hotfix to load terrain later so Unity doesn't get overwhelmed.

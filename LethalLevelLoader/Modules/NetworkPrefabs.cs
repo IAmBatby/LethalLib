@@ -5,6 +5,8 @@ using System.Text;
 using static LethalLevelLoader.Plugin;
 using Unity.Netcode;
 using UnityEngine;
+using System.Linq;
+using LethalLevelLoader.Extras;
 
 namespace LethalLevelLoader.Modules
 {
@@ -21,15 +23,20 @@ namespace LethalLevelLoader.Modules
         /// </summary>
         public static void RegisterNetworkPrefab(GameObject prefab)
         {
-            _networkPrefabs.Add(prefab);
+            if (!_networkPrefabs.Contains(prefab))
+                _networkPrefabs.Add(prefab);
+            //UnityEngine.Object.FindObjectOfType<NetworkManager>().AddNetworkPrefab(prefab);
         }
 
         private static void GameNetworkManager_Start(On.GameNetworkManager.orig_Start orig, GameNetworkManager self)
         {
             orig(self);
 
+            DebugHelper.Log("Game NetworkManager Start");
+
             foreach (GameObject obj in _networkPrefabs)
             {
+                DebugHelper.Log("Registering: " + obj.name);
                 self.GetComponent<NetworkManager>().AddNetworkPrefab(obj);
             }
             

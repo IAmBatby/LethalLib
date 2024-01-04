@@ -1,10 +1,13 @@
-﻿using HarmonyLib;
+﻿using DunGen;
+using DunGen.Graph;
+using HarmonyLib;
 using LethalLevelLoader.Extras;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Text;
+using Unity.Netcode;
 using UnityEngine;
 
 namespace LethalLevelLoader.Modules
@@ -12,7 +15,7 @@ namespace LethalLevelLoader.Modules
     //A way to automatically pull custom content from AssetBundles if they fit the requirements.
     //Assets pulled from bundles will be sent to the pre-existing functions
     // This is only a helper and won't do anything that can't be done manually
-    class AssetBundleLoader
+    public static class AssetBundleLoader
     {
         public static string specifiedFileExtension = string.Empty;
 
@@ -20,32 +23,18 @@ namespace LethalLevelLoader.Modules
         public static DirectoryInfo lethalLibFolder;
         public static DirectoryInfo pluginsFolder;
 
-        //RoundManager Awake is pretty much the earliest we can safely mess with stuff.
-        [HarmonyPatch(typeof(RoundManager), nameof(RoundManager.Awake))]
-        [HarmonyPostfix]
-        public static void RoundManagerAwake_Postfix()
-        {
-            FindBundles();
-        }
+        public static List<(SelectableLevel, GameObject)> obtainedSelectableLevelsList = new List<(SelectableLevel, GameObject)>();
+        public static List<ExtendedLevel> obtainedExtendedLevelsList = new List<ExtendedLevel>();
 
-        //StartOfRound stores a levels list assigned in Unity Editor, So we need to update that as soon as possible.
-        //This is also the earliest place we can access the Vanilla SelectableLevels. So we scrape vanilla and restore references here.
-        [HarmonyPatch(typeof(StartOfRound), nameof(StartOfRound.Awake))]
-        [HarmonyPostfix]
+        //RoundManager Awake is pretty much the earliest we can safely mess with stuff.
+        [HarmonyPatch(typeof(StartOfRound), "Awake")]
+        [HarmonyPrefix]
         public static void StartOfRoundAwake_Postfix(StartOfRound __instance)
         {
-            foreach (ExtendedLevel customLevel in Levels.customLevelsList)
-                RestoreVanillaAssetReferences(customLevel.selectableLevel);
 
-            __instance.levels = Levels.AllSelectableLevelsList.ToArray();
-        }
-
-        //Terminal stores a levels list assigned in Unity Editor, So we need to update that as soon as possible.
-        [HarmonyPatch(typeof(Terminal), nameof(Terminal.Awake))]
-        [HarmonyPostfix]
-        public static void TerminalAwake_Postfix(Terminal __instance)
-        {
-            __instance.moonsCatalogueList = Levels.AllSelectableLevelsList.ToArray();
+            CreateVanillaExtendedLevels(__instance);
+            CreateVanillaExtendedDungeonFlows();
+            ProcessBundleContent();
         }
 
         public static void FindBundles()
@@ -67,22 +56,75 @@ namespace LethalLevelLoader.Modules
                 DebugHelper.Log("Loading Custom Content From Bundle: " + newBundle.name);
 
                 foreach (ExtendedLevel extendedLevel in newBundle.LoadAllAssets<ExtendedLevel>())
-                {
-                    ExtendedLevel.ProcessCustomLevel(extendedLevel);
-                    Levels.AddSelectableLevel(extendedLevel);
-                }
+                    obtainedExtendedLevelsList.Add(extendedLevel);
 
                 foreach (SelectableLevel selectableLevel in newBundle.LoadAllAssets<SelectableLevel>())
                     foreach (GameObject gameObject in newBundle.LoadAllAssets<GameObject>())
                         if (!Levels.AllSelectableLevelsList.Contains(selectableLevel))
                             if (gameObject.name == ExtendedLevel.GetNumberlessPlanetName(selectableLevel))
-                            {
-                                ExtendedLevel extendedLevel = ScriptableObject.CreateInstance<ExtendedLevel>();
-                                extendedLevel.Initialize(selectableLevel, LevelType.Custom, generateTerminalAssets: true, newLevelPrefab: gameObject, newSourceName: newBundle.name);
-                                ExtendedLevel.ProcessCustomLevel(extendedLevel);
-                                Levels.AddSelectableLevel(extendedLevel);
-                                //new ExtendedLevel(selectableLevel, LevelType.Custom, generateTerminalAssets: true, newLevelPrefab: gameObject, newSourceName: newBundle.name);
-                            }
+                                obtainedSelectableLevelsList.Add((selectableLevel, gameObject));
+            }
+        }
+
+        public static void RegisterDungeonContent(DungeonFlow dungeonFlow)
+        {
+            //List<Tile> dungeonTiles = UnityEngine.Object.FindObjectsOfType<Tile>
+            List<SpawnSyncedObject> spawnSyncedObjectList = new List<SpawnSyncedObject>();
+
+            foreach (GraphNode dungeonNode in dungeonFlow.Nodes)
+                foreach (TileSet dungeonTileSet in dungeonNode.TileSets)
+                    foreach (GameObjectChance dungeonTileWeight in dungeonTileSet.TileWeights.Weights)
+                        FindSpawnSyncedObjectsInTiles(dungeonTileWeight.Value.GetComponentsInChildren<Tile>());
+
+            foreach (GraphLine dungeonLine in dungeonFlow.Lines)
+                foreach (DungeonArchetype dungeonArchetype in dungeonLine.DungeonArchetypes)
+                {
+                    foreach (TileSet dungeonTileSet in dungeonArchetype.BranchCapTileSets)
+                        foreach (GameObjectChance dungeonTileWeight in dungeonTileSet.TileWeights.Weights)
+                            FindSpawnSyncedObjectsInTiles(dungeonTileWeight.Value.GetComponentsInChildren<Tile>());
+
+                    foreach (TileSet dungeonTileSet in dungeonArchetype.TileSets)
+                        foreach (GameObjectChance dungeonTileWeight in dungeonTileSet.TileWeights.Weights)
+                                FindSpawnSyncedObjectsInTiles(dungeonTileWeight.Value.GetComponentsInChildren<Tile>());
+                }
+        }
+
+        public static void FindSpawnSyncedObjectsInTiles(Tile[] tileList)
+        {
+            foreach (Tile dungeonTile in tileList)
+            {
+                foreach (Doorway dungeonDoorway in dungeonTile.gameObject.GetComponentsInChildren<Doorway>())
+                    foreach (GameObjectWeight doorwayTileWeight in dungeonDoorway.ConnectorPrefabWeights)
+                        if (doorwayTileWeight.GameObject.GetComponent<SpawnSyncedObject>() != null)
+                            RegisterSpawnSyncedObject(doorwayTileWeight.GameObject.GetComponent<SpawnSyncedObject>());
+
+                foreach (SpawnSyncedObject spawnSyncedObject in dungeonTile.gameObject.GetComponentsInChildren<SpawnSyncedObject>())
+                    RegisterSpawnSyncedObject(spawnSyncedObject);
+            }
+        }
+
+        public static void RegisterSpawnSyncedObject(SpawnSyncedObject spawnSyncedObject)
+        {
+            DebugHelper.Log("Added: " + spawnSyncedObject.spawnPrefab.name + " To NetworkPrefab List!");
+            if (spawnSyncedObject.spawnPrefab.GetComponent<NetworkObject>() == null)
+                spawnSyncedObject.spawnPrefab.AddComponent<NetworkObject>();
+            NetworkPrefabs.RegisterNetworkPrefab(spawnSyncedObject.spawnPrefab);
+        }
+
+        public static void ProcessBundleContent()
+        {
+            foreach (ExtendedLevel extendedLevel in obtainedExtendedLevelsList)
+            {
+                ExtendedLevel.ProcessCustomLevel(extendedLevel);
+                Levels.AddSelectableLevel(extendedLevel);
+            }
+
+            foreach ((SelectableLevel, GameObject) selectableLevel in obtainedSelectableLevelsList)
+            {
+                ExtendedLevel extendedLevel = ScriptableObject.CreateInstance<ExtendedLevel>();
+                extendedLevel.Initialize(selectableLevel.Item1, LevelType.Custom, generateTerminalAssets: true, newLevelPrefab: selectableLevel.Item2, newSourceName: "fixlater");
+                ExtendedLevel.ProcessCustomLevel(extendedLevel);
+                Levels.AddSelectableLevel(extendedLevel);
             }
 
             DebugHelper.DebugAllLevels();
@@ -138,6 +180,32 @@ namespace LethalLevelLoader.Modules
                 if (selectableLevel.levelAmbienceClips != null && selectableLevel.levelAmbienceClips.name == vanillaAmbienceLibrary.name)
                     selectableLevel.levelAmbienceClips = vanillaAmbienceLibrary;
             
+        }
+
+        public static void CreateVanillaExtendedLevels(StartOfRound startOfRound)
+        {
+            DebugHelper.Log("Creating ExtendedLevels For Vanilla SelectableLevels");
+
+            foreach (SelectableLevel selectableLevel in startOfRound.levels)
+            {
+                DebugHelper.Log("Moons SelectableLevel Is: " + (selectableLevel != null));
+                ExtendedLevel extendedLevel = ScriptableObject.CreateInstance<ExtendedLevel>();
+                extendedLevel.Initialize(selectableLevel, LevelType.Vanilla, generateTerminalAssets: false);
+                Levels.AddSelectableLevel(extendedLevel);
+            }
+        }
+
+        public static void CreateVanillaExtendedDungeonFlows()
+        {
+            DebugHelper.Log("Creating ExtendedDungeonFlows For Vanilla DungeonFlows");
+
+            foreach (DungeonFlow dungeonFlow in RoundManager.Instance.dungeonFlowTypes)
+            {
+                ExtendedDungeonFlow extendedDungeonFlow = ScriptableObject.CreateInstance<ExtendedDungeonFlow>();
+                extendedDungeonFlow.Initialize(dungeonFlow, null, LevelType.Vanilla, "Lethal Company");
+                Dungeon.AddExtendedDungeonFlow(extendedDungeonFlow);
+                //Gotta assign the right audio later.
+            }
         }
     }
 }

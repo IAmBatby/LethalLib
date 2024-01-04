@@ -170,6 +170,30 @@ namespace LethalLevelLoader.Extras
 
             return (returnString);
         }
+
+        public static void DebugAllExtendedDungeons()
+        {
+            string debugString = "All ExtendedDungeons: " + "\n" + "\n";
+
+            foreach (ExtendedDungeonFlow dungeonFlow in Dungeon.allExtendedDungeonsList)
+                debugString += dungeonFlow.dungeonFlow.name;
+
+            Log(debugString);
+
+            debugString = "Vanilla ExtendedDungeons: " + "\n" + "\n";
+
+            foreach (ExtendedDungeonFlow dungeonFlow in Dungeon.vanillaDungeonFlowsList)
+                debugString += dungeonFlow.dungeonFlow.name;
+
+            Log(debugString);
+
+            debugString = "Custom ExtendedDungeons: " + "\n" + "\n";
+
+            foreach (ExtendedDungeonFlow dungeonFlow in Dungeon.customDungeonFlowsList)
+                debugString += dungeonFlow.dungeonFlow.name;
+
+            Log(debugString);
+        }
     }
 
 }

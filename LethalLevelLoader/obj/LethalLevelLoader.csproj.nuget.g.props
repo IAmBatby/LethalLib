@@ -30,4 +30,7 @@
   <ImportGroup Condition=" '$(ExcludeRestorePackageImports)' != 'true' ">
     <Import Project="$(NuGetPackageRoot)bepinex.assemblypublicizer.msbuild\0.4.1\build\BepInEx.AssemblyPublicizer.MSBuild.props" Condition="Exists('$(NuGetPackageRoot)bepinex.assemblypublicizer.msbuild\0.4.1\build\BepInEx.AssemblyPublicizer.MSBuild.props')" />
   </ImportGroup>
+  <PropertyGroup Condition=" '$(ExcludeRestorePackageImports)' != 'true' ">
+    <PkgBepInEx_Core Condition=" '$(PkgBepInEx_Core)' == '' ">C:\Users\Batby.000\.nuget\packages\bepinex.core\5.4.21</PkgBepInEx_Core>
+  </PropertyGroup>
 </Project>
