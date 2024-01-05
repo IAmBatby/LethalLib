@@ -127,6 +127,9 @@ namespace LethalLevelLoader.Modules
                 }
 
             return (false);
+
+            //rarity = 300;
+            //return (true);
         }
 
         public static bool MatchViaManualLevelList(ExtendedLevel extendedLevel, ExtendedDungeonFlow extendedDungeonFlow, out int rarity)

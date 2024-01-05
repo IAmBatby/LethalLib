@@ -1,4 +1,5 @@
 ﻿using DunGen.Graph;
+using GameNetcodeStuff;
 using HarmonyLib;
 using LethalLevelLoader.Modules;
 using System;
@@ -193,6 +194,22 @@ namespace LethalLevelLoader.Extras
                 debugString += dungeonFlow.dungeonFlow.name;
 
             Log(debugString);
+        }
+
+        [HarmonyPatch(typeof(PlayerControllerB), "Awake")]
+        [HarmonyPostfix]
+        public static void SetPlayerNames(PlayerControllerB __instance)
+        {
+            if (__instance.IsServer)
+            {
+                Log("SetPlayerNames: This Client Is The Host!");
+                __instance.playerUsername = "Host";
+            }
+            else
+            {
+                Log("SetPlayerNames: This Client Is Not The Host!");
+                __instance.playerUsername = "Client";
+            }
         }
     }
 

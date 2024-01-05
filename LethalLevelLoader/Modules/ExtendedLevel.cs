@@ -50,22 +50,25 @@ namespace LethalLevelLoader.Modules
             {
                 levelPrefab = newLevelPrefab;
                 levelTags.Add("Custom");
+                //This isn't used in LethalLevelLoader because we prefix patch the NetworkSceneManager with the right sceneName if the level is custom
+                //We Set this to a Unique name because at one point (find where later) the game compares scene string names and we should ensure they are all Unique.
+                selectableLevel.sceneName = NumberlessPlanetName;
+                //selectableLevel.levelID = 9;
             }
 
-            List<IntWithRarity> tempFlowTypes = new List<IntWithRarity>(selectableLevel.dungeonFlowTypes);
+            /*List<IntWithRarity> tempFlowTypes = new List<IntWithRarity>(selectableLevel.dungeonFlowTypes);
 
             foreach (IntWithRarity dungeonFlow in selectableLevel.dungeonFlowTypes)
                 if (dungeonFlow == null)
-                    tempFlowTypes.Remove(dungeonFlow);
+                    tempFlowTypes.Remove(dungeonFlow);*/
 
             selectableLevel.levelID = Levels.allLevelsList.Count;
 
-            selectableLevel.dungeonFlowTypes = tempFlowTypes.ToArray();
+            //selectableLevel.dungeonFlowTypes = tempFlowTypes.ToArray();
         }
 
         public static void ProcessCustomLevel(ExtendedLevel extendedLevel)
         {
-            extendedLevel.selectableLevel.sceneName = Levels.injectionSceneName; //BAD FIX THIS LATER.
             extendedLevel.fireExitsAmount = extendedLevel.levelPrefab.GetComponentsInChildren<EntranceTeleport>().Length - 1; //-1 Becuase this includes Main Entrance.
             TerminalUtils.CreateLevelTerminalData(extendedLevel);
         }

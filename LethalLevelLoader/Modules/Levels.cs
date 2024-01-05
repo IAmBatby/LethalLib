@@ -6,8 +6,10 @@ using System.Collections.Generic;
 using System.Linq;
 using Unity.Netcode;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using static LethalLevelLoader.Modules.Dungeon;
 using Object = UnityEngine.Object;
+using Random = System.Random;
 
 namespace LethalLevelLoader.Modules
 {
@@ -47,68 +49,210 @@ namespace LethalLevelLoader.Modules
         }
 
 
-        [HarmonyPatch(typeof(RoundManager), "SpawnMapObjects")]
+        [HarmonyPatch(typeof(StartOfRound), "OnPlayerConnectedClientRpc")]
         [HarmonyPrefix]
-        public static void SpawnMapObjects_Prefix(RoundManager __instance)
+        public static void OnPlayerConnectedClientRpc_Prefix()
         {
-            List<RandomMapObject> spawnableMapObjects = Object.FindObjectsOfType<RandomMapObject>().ToList();
+            DebugHelper.Log("OnPlayerConnected Prefix!");
+        }
+
+        [HarmonyPatch(typeof(TimeOfDay), "OnDayChanged")]
+        [HarmonyPrefix]
+        public static void OnDayChanged_Prefix()
+        {
+            DebugHelper.Log("OnDayChanged Prefix!");
+        }
+
+        [HarmonyPatch(typeof(StartOfRound), "SetTimeAndPlanetToSavedSettings")]
+        [HarmonyPrefix]
+        public static void SetTimeAndPlanetToSavedSettings_Prefix()
+        {
+            DebugHelper.Log("SetTimeAndPlanetToSavedSettings Prefix!");
+        }
+
+
+        [HarmonyPatch(typeof(RoundManager), "FinishGeneratingLevel")]
+        [HarmonyPrefix]
+        public static void FinishGeneratingLevel_Prefix()
+        {
+            string debugString = string.Empty;
+
+            debugString += "Start Of FinishGeneratingLevel Prefix." + "\n";
+
+            DebugHelper.Log(debugString);
+        }
+
+        [HarmonyPatch(typeof(StartOfRound), "SetPlanetsWeather")]
+        [HarmonyPostfix]
+        public static void SetPlanetsWeather_Postfix()
+        {
 
             string debugString = string.Empty;
 
-            debugString += "MapPropsContainer Is: " + (GameObject.FindGameObjectWithTag("MapPropsContainer") != null) + "\n";
-            debugString += "AnomalyRandom Is: " + (__instance.AnomalyRandom != null);
+            debugString += "Start Of SetPlanetWeather() Postfix." + "\n";
 
-            debugString += "Current Level SpawnMapObject List; Count Is: " + __instance.currentLevel.spawnableMapObjects.Length + "\n";
+            debugString += "RandomMapSeed Is: " + StartOfRound.Instance.randomMapSeed + "\n";
 
-            foreach (SpawnableMapObject spawnMapObject in __instance.currentLevel.spawnableMapObjects)
-            {
-                if (spawnMapObject != null)
-                {
-                    debugString += "SpawnMapObject Found" + "\n";
-                    if (spawnMapObject.prefabToSpawn != null)
-                    {
-                        debugString += "PrefabToSpawn Name: " + spawnMapObject.prefabToSpawn.name + "\n";
-                        debugString += "Amount" + spawnMapObject.numberToSpawn.ToString() + "\n";
-                        debugString += "NetworkObject Is: " + (spawnMapObject.prefabToSpawn.GetComponent<NetworkObject>() != null);
-                    }
-                    else
-                        debugString += "PrefabToSpawn Was Null!" + "\n";
-                }
-                else
-                    debugString += "SpawnMapObject Was Null!" + "\n";
-            }
-
-            debugString += "\n" + "Current Dungeon RandomMapObject List; Count Is: " + spawnableMapObjects.Count + "\n";
-
-            foreach (RandomMapObject randomMapObject in spawnableMapObjects)
-            {
-                if (randomMapObject != null)
-                {
-                    debugString += "\n" + "RandomMapObject Name: " + randomMapObject.name + "\n";
-                    foreach (GameObject randomObject in randomMapObject.spawnablePrefabs)
-                    {
-                        if (randomObject != null)
-                            debugString += "SpawnablePrefab Name: " + randomObject.name + "\n";
-                        else
-                            debugString += "SpawnablePrefab Was Null!" + "\n";
-
-                    }
-                }
-                else
-                    debugString += "RandomMapObject Was Null!" + "\n";
-            }
-
-            debugString += "End Of SpawnMapObjects Log." + "\n";
+            debugString += "End Of SetPlanetWeather() Postfix." + "\n" + "\n";
 
             DebugHelper.Log(debugString);
+        }
+
+        [HarmonyPatch(typeof(StartOfRound), "SetPlanetsWeather")]
+        [HarmonyPrefix]
+        public static void SetPlanetsWeather_Prefix(StartOfRound __instance, int connectedPlayersOnServer)
+        {
+            DebugPlanetWeatherRandomisation(connectedPlayersOnServer, prePatchedLevelsList);
+            DebugPlanetWeatherRandomisation(connectedPlayersOnServer, __instance.levels.ToList<SelectableLevel>());
+        }
+
+        public static void DebugPlanetWeatherRandomisation(int players, List<SelectableLevel> selectableLevelsList)
+        {
+            StartOfRound startOfRound = StartOfRound.Instance;
+
+            List<SelectableLevel> selectableLevels = new List<SelectableLevel>(selectableLevelsList);
+
+            //Recreate Weather Random Stuff
+
+
+            foreach (SelectableLevel selectableLevel in selectableLevels)
+                selectableLevel.currentWeather = LevelWeatherType.None;
+
+            Random weatherRandom = new Random(startOfRound.randomMapSeed + 31);
+
+            float playerRandomFloat = 1f;
+
+            if (players + 1 > 1 && startOfRound.daysPlayersSurvivedInARow > 2 && startOfRound.daysPlayersSurvivedInARow % 3 == 0)
+                playerRandomFloat = (float)weatherRandom.Next(15, 25) / 10f;
+
+            int randomPlanetWeatherCurve = Mathf.Clamp((int)(Mathf.Clamp(startOfRound.planetsWeatherRandomCurve.Evaluate((float)weatherRandom.NextDouble()) * playerRandomFloat, 0f, 1f) * (float)selectableLevels.Count), 0, selectableLevels.Count);
+
+            //Debug Logging
+
+            string debugString = string.Empty;
+            debugString += "Start Of SetPlanetWeather() Prefix." + "\n";
+            debugString += "Planet Weather Being Set! Details Below;" + "\n" + "\n";
+            debugString += "RandomMapSeed Is: " + startOfRound.randomMapSeed + "\n";
+            debugString += "Planet Random Is: " + weatherRandom + "\n";
+            debugString += "Player Random Is: " + playerRandomFloat + "\n";
+            debugString += "Result From PlanetWeatherRandomCurve Is: " + randomPlanetWeatherCurve + "\n";
+            debugString += "All SelectableLevels In StartOfRound: " + "\n" + "\n";
+
+
+            foreach (SelectableLevel selectableLevel in selectableLevels)
+            {
+                debugString += selectableLevel.PlanetName + " | " + selectableLevel.currentWeather + " | " + selectableLevel.overrideWeather + "\n";
+                foreach (RandomWeatherWithVariables randomWeather in selectableLevel.randomWeathers)
+                    debugString += randomWeather.weatherType.ToString() + " | " + randomWeather.weatherVariable + " | " + randomWeather.weatherVariable2 + "\n";
+
+                debugString += "\n";
+            }
+
+            debugString += "SelectableLevels Chosen Using Random Variables Should Be: " + "\n" + "\n";
+
+            for (int j = 0; j < randomPlanetWeatherCurve; j++)
+            {
+                SelectableLevel selectableLevel = selectableLevels[weatherRandom.Next(0, selectableLevels.Count)];
+                debugString += "SelectableLevel Chosen! Planet Name Is: " + selectableLevel.PlanetName;
+                if (selectableLevel.randomWeathers != null && selectableLevel.randomWeathers.Length != 0)
+                {
+                    int randomSelection = weatherRandom.Next(0, selectableLevel.randomWeathers.Length);
+                    debugString += " --- Selected For Weather Change! Setting WeatherType From: " + selectableLevel.currentWeather + " To: " + selectableLevel.randomWeathers[randomSelection].weatherType + "\n";
+                    debugString += "          Random Selection Results Were: " + randomSelection + " (Range: 0 - " + selectableLevel.randomWeathers.Length + ") Level RandomWeathers Choices Were: " + "\n" + "          ";
+
+                    int index = 0;
+                    foreach (RandomWeatherWithVariables weatherType in selectableLevel.randomWeathers)
+                    {
+                        debugString += index + " . - " + weatherType.weatherType + ", ";
+                        index++;
+                    }
+                    debugString += "\n" + "\n";
+                }
+                else
+                    debugString += "\n";
+                selectableLevels.Remove(selectableLevel);
+            }
+
+            debugString += "End Of SetPlanetWeather() Prefix." + "\n" + "\n";
+
+            DebugHelper.Log(debugString);
+        }
+
+        public static bool patchedLoadSceneName = false;
+
+        [HarmonyPatch(typeof(StartOfRound), "StartGame")]
+        [HarmonyPrefix]
+        public static void StartGame_Prefix()
+        {
+            DebugHelper.Log("StartGame_Prefix");
+        }
+
+
+        [HarmonyPatch(typeof(NetworkSceneManager), "LoadScene")]
+        [HarmonyPrefix]
+        public static void LoadScene_Prefix(ref string sceneName, LoadSceneMode loadSceneMode)
+        {
+            DebugHelper.Log("LoadScene_Prefix");
+            if (StartOfRound.Instance != null)
+                if (patchedLoadSceneName == false)
+                    if (TryGetExtendedLevel(StartOfRound.Instance.currentLevel, out ExtendedLevel extendedLevel))
+                        if (extendedLevel.levelType == ContentType.Custom)
+                        {
+                            sceneName = injectionSceneName;
+                            patchedLoadSceneName = true;
+                        }
+
+        }
+
+        [HarmonyPatch(typeof(StartOfRound), "SceneManager_OnLoad")]
+        [HarmonyPrefix]
+        public static void OnLoad_Prefix(ref string sceneName)
+        {
+            DebugHelper.Log("OnLoad_Prefix");
+            if (patchedLoadSceneName == true)
+                sceneName = StartOfRound.Instance.currentLevel.sceneName;
+        }
+
+        [HarmonyPatch(typeof(StartOfRound), "SceneManager_OnLoadComplete1")]
+        [HarmonyPrefix]
+        public static void OnLoadComplete1_Prefix(ref string sceneName)
+        {
+            DebugHelper.Log("OnLoadComplete1_Prefix");
+            if (patchedLoadSceneName == true)
+                sceneName = StartOfRound.Instance.currentLevel.sceneName;
+        }
+
+
+        [HarmonyPatch(typeof(StartOfRound), "SceneManager_OnUnloadComplete")]
+        [HarmonyPrefix]
+        public static void OnUnloadComplete_Prefix(ref string sceneName)
+        {
+            DebugHelper.Log("OnUnloadComplete_Prefix");
+            if (patchedLoadSceneName == true)
+            {
+                sceneName = StartOfRound.Instance.currentLevel.sceneName;
+                patchedLoadSceneName = false;
+            }
         }
 
         [HarmonyPatch(typeof(StartOfRound), "ChangeLevel")]
         [HarmonyPrefix]
         public static void ChangeLevel_Prefix(int levelID) //Gotta look into this properlly
         {
-            if (levelID >= 9)
-                levelID = 0;
+            DebugHelper.Log("ChangeLevel Prefix!");
+            DebugHelper.Log("CurrentLevelID: " + levelID + " | CurrentLevel: " + StartOfRound.Instance.levels[levelID].PlanetName);
+            //if (levelID >= 9)
+                //levelID = 0;
+            DebugHelper.Log("Patching LevelID!");
+            DebugHelper.Log("CurrentLevelID: " + levelID + " | CurrentLevel: " + StartOfRound.Instance.levels[levelID].PlanetName);
+        }
+
+        [HarmonyPatch(typeof(StartOfRound), "ChangeLevel")]
+        [HarmonyPostfix]
+        public static void ChangeLevel_Postfix() //Gotta look into this properlly
+        {
+            DebugHelper.Log("ChangeLevel Postfix!");
+            DebugHelper.Log("CurrentLevelID: " + StartOfRound.Instance.currentLevelID + " | CurrentLevel: " + StartOfRound.Instance.currentLevel.PlanetName);
         }
 
         [HarmonyPatch(typeof(RoundManager), "Start")]
@@ -137,6 +281,8 @@ namespace LethalLevelLoader.Modules
             allLevelsList.Add(extendedLevel);
         }
 
+        public static List<SelectableLevel> prePatchedLevelsList = new List<SelectableLevel>();
+
         public static void PatchVanillaLevelLists()
         {
             DebugHelper.Log("Patching Vanilla Level List!");
@@ -147,6 +293,8 @@ namespace LethalLevelLoader.Modules
 
             foreach (ExtendedLevel extendedLevel in allLevelsList)
                 allSelectableLevels.Add(extendedLevel.selectableLevel);
+
+            prePatchedLevelsList = startOfRound.levels.ToList();
 
             startOfRound.levels = allSelectableLevels.ToArray();
             terminal.moonsCatalogueList = allSelectableLevels.ToArray();

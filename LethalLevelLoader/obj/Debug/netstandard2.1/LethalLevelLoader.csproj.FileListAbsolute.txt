@@ -204,10 +204,10 @@ C:\Projects\LethalCompany\LethalLevelLoader\LethalLevelLoader\bin\Debug\netstand
 C:\Projects\LethalCompany\LethalLevelLoader\LethalLevelLoader\bin\Debug\netstandard2.1\Unity.Timeline.dll
 C:\Projects\LethalCompany\LethalLevelLoader\LethalLevelLoader\bin\Debug\netstandard2.1\BepInEx.Harmony.xml
 C:\Projects\LethalCompany\LethalLevelLoader\LethalLevelLoader\bin\Debug\netstandard2.1\BepInEx.Preloader.xml
-C:\Projects\LethalCompany\LethalLevelLoader\LethalLevelLoader\obj\Debug\netstandard2.1\LethalLevelLoader.csprojAssemblyReference.cache
 C:\Projects\LethalCompany\LethalLevelLoader\LethalLevelLoader\obj\Debug\netstandard2.1\LethalLevelLoader.AssemblyInfoInputs.cache
 C:\Projects\LethalCompany\LethalLevelLoader\LethalLevelLoader\obj\Debug\netstandard2.1\LethalLevelLoader.AssemblyInfo.cs
 C:\Projects\LethalCompany\LethalLevelLoader\LethalLevelLoader\obj\Debug\netstandard2.1\LethalLevelLoader.csproj.CoreCompileInputs.cache
 C:\Projects\LethalCompany\LethalLevelLoader\LethalLevelLoader\obj\Debug\netstandard2.1\LethalLevelLoader.csproj.CopyComplete
 C:\Projects\LethalCompany\LethalLevelLoader\LethalLevelLoader\obj\Debug\netstandard2.1\LethalLevelLoader.dll
 C:\Projects\LethalCompany\LethalLevelLoader\LethalLevelLoader\obj\Debug\netstandard2.1\LethalLevelLoader.pdb
+C:\Projects\LethalCompany\LethalLevelLoader\LethalLevelLoader\obj\Debug\netstandard2.1\LethalLevelLoader.csprojAssemblyReference.cache

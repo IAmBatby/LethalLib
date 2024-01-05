@@ -96,27 +96,26 @@ public class LevelLoader
         DebugHelper.Log("OnLoadComplete. CurrentLevelSceneName: " + RoundManager.Instance.currentLevel.sceneName + " | " + "InjectionSceneName: " + Levels.injectionSceneName);
 
         if (SceneManager.GetSceneByName("SampleSceneRelay") != null)
-            PreloadTerrainShader();
+            //PreloadTerrainShader();
         if (SceneManager.GetSceneByName("MainMenu") != null) //IsInGame check to stop us from trying to inject before the intended InitSceneLaunchOptions usage.
             isInGame = true;
+        /*if (SceneManager.GetSceneByName(Levels.injectionSceneName) != null)
+            if (Levels.TryGetExtendedLevel(StartOfRound.Instance.currentLevel, out ExtendedLevel extendedLevel))
+                InjectCustomMoon(SceneManager.GetSceneByName(Levels.injectionSceneName), extendedLevel, false);*/
         if (SceneManager.GetSceneByName(Levels.injectionSceneName) != null)
-            if (isInGame == true)
-                if (RoundManager.Instance.currentLevel.sceneName == Levels.injectionSceneName)
-                    InjectCustomMoon(SceneManager.GetSceneByName(Levels.injectionSceneName), true);
+            if (Levels.TryGetExtendedLevel(StartOfRound.Instance.currentLevel, out ExtendedLevel extendedLevel))
+                InjectCustomMoon(SceneManager.GetSceneByName(Levels.injectionSceneName), extendedLevel, false);
     }
-
-    public static void InjectCustomMoon(Scene scene, bool disableTerrainOnFirstFrame = false)
+    public static void InjectCustomMoon(Scene scene, ExtendedLevel extendedLevel, bool disableTerrainOnFirstFrame = false)
     {
-        if (terrainfixer != null)
-            terrainfixer.SetActive(false);
+        //if (terrainfixer != null)
+            //terrainfixer.SetActive(false);
 
         if (isMoonInjected == false)
         {
             foreach (GameObject obj in scene.GetRootGameObjects()) //Disable everything in the Scene were injecting into
                 obj.SetActive(false);
 
-            if (Levels.TryGetExtendedLevel(StartOfRound.Instance.currentLevel, out ExtendedLevel extendedLevel))
-            {
                 if (extendedLevel.levelPrefab != null)
                 {
                     GameObject mainPrefab = GameObject.Instantiate(extendedLevel.levelPrefab);
@@ -133,17 +132,9 @@ public class LevelLoader
                             DisableTerrain();
                     }
                 }
-            }
             isMoonInjected = true;
             DebugHelper.DebugSelectableLevelReferences(extendedLevel);
         }
-    }
-
-    [HarmonyPatch(typeof(RoundManager), "GenerateNewFloor")]
-    [HarmonyPostfix]
-    public static void GenerateNewFloor_PostFix()
-    {
-        //RoundManager.Instance.currentLevel.spawnableMapObjects = Array.Empty<SpawnableMapObject>();
     }
 
     public static void DisableTerrain() //Jank hotfix to load terrain later so Unity doesn't get overwhelmed.

@@ -9,6 +9,8 @@ using System.Reflection;
 using System.Text;
 using Unity.Netcode;
 using UnityEngine;
+using UnityEngine.Experimental.Rendering;
+using UnityEngine.Rendering;
 
 namespace LethalLevelLoader.Modules
 {
@@ -31,7 +33,8 @@ namespace LethalLevelLoader.Modules
         [HarmonyPrefix]
         public static void StartOfRoundAwake_Postfix(StartOfRound __instance)
         {
-
+            DebugHelper.Log("yayaayaya");
+            
             CreateVanillaExtendedLevels(__instance);
             CreateVanillaExtendedDungeonFlows();
             ProcessBundleContent();
@@ -39,6 +42,7 @@ namespace LethalLevelLoader.Modules
 
         public static void FindBundles()
         {
+            DebugHelper.Log("yipieieie");
             lethalLibFolder = lethalLibFile.Parent;
             pluginsFolder = lethalLibFile.Parent.Parent;
             specifiedFileExtension = "*.lethalbundle";
@@ -56,13 +60,49 @@ namespace LethalLevelLoader.Modules
                 DebugHelper.Log("Loading Custom Content From Bundle: " + newBundle.name);
 
                 foreach (ExtendedLevel extendedLevel in newBundle.LoadAllAssets<ExtendedLevel>())
-                    obtainedExtendedLevelsList.Add(extendedLevel);
+                {
+                    //TryGetShaders(extendedLevel);
+                    //obtainedExtendedLevelsList.Add(extendedLevel);
+                }
 
                 foreach (SelectableLevel selectableLevel in newBundle.LoadAllAssets<SelectableLevel>())
                     foreach (GameObject gameObject in newBundle.LoadAllAssets<GameObject>())
                         if (!Levels.AllSelectableLevelsList.Contains(selectableLevel))
                             if (gameObject.name == ExtendedLevel.GetNumberlessPlanetName(selectableLevel))
                                 obtainedSelectableLevelsList.Add((selectableLevel, gameObject));
+            }
+        }
+
+        public static void TryGetShaders(ExtendedLevel extendedLevel)
+        {
+            DebugHelper.Log("Trying To Find Shaders In AssetBundle: ");
+
+            List<(Shader, ShaderWarmupSetup)> shaderWithWarmupSetupList = new List<(Shader, ShaderWarmupSetup)>();
+
+            ShaderWarmupSetup warmupSetup;
+            foreach (MeshRenderer meshRenderer in extendedLevel.levelPrefab.GetComponentsInChildren<MeshRenderer>())
+            {
+                MeshFilter meshFilter = meshRenderer.gameObject.GetComponent<MeshFilter>();
+                if (meshFilter != null)
+                {
+                    warmupSetup = new ShaderWarmupSetup();
+                    warmupSetup.vdecl = meshFilter.mesh.GetVertexAttributes();
+
+                    foreach (Material material in meshRenderer.materials)
+                    {
+                        DebugHelper.Log("Found Material Shader: " + material.shader.name + " In AssetBundle: " + extendedLevel.NumberlessPlanetName);
+                        shaderWithWarmupSetupList.Add((material.shader, warmupSetup));
+                    }
+                }
+            }
+
+            DebugHelper.Log("Created " + shaderWithWarmupSetupList.Count + "ShaderWithWarmupSetup's");
+            DebugHelper.Log("Attempting To Preload AssetBundle Shaders!");
+
+            foreach ((Shader, ShaderWarmupSetup) shaderWithWarmupSetup in shaderWithWarmupSetupList)
+            {
+                DebugHelper.Log("Trying To Warmup: " + shaderWithWarmupSetup.Item1.name);
+                ShaderWarmup.WarmupShader(shaderWithWarmupSetup.Item1, shaderWithWarmupSetup.Item2);
             }
         }
 
@@ -149,10 +189,12 @@ namespace LethalLevelLoader.Modules
 
         public static void ProcessBundleContent()
         {
+            DebugHelper.Log("Trying To Get Shaders 12");
             foreach (ExtendedLevel extendedLevel in obtainedExtendedLevelsList)
             {
                 ExtendedLevel.ProcessCustomLevel(extendedLevel);
                 Levels.AddSelectableLevel(extendedLevel);
+                DebugHelper.Log("Trying To Get Shaders");
             }
 
             foreach ((SelectableLevel, GameObject) selectableLevel in obtainedSelectableLevelsList)
@@ -161,6 +203,7 @@ namespace LethalLevelLoader.Modules
                 extendedLevel.Initialize(selectableLevel.Item1, ContentType.Custom, generateTerminalAssets: true, newLevelPrefab: selectableLevel.Item2, newSourceName: "fixlater");
                 ExtendedLevel.ProcessCustomLevel(extendedLevel);
                 Levels.AddSelectableLevel(extendedLevel);
+                TryGetShaders(extendedLevel);
             }
 
             DebugHelper.DebugAllLevels();
