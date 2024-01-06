@@ -50,39 +50,8 @@ namespace LethalLevelLoader.Modules
             }
         }
         
-        public static TerminalKeyword CreateTerminalKeyword(string word, bool isVerb = false, CompatibleNoun[] compatibleNouns = null, TerminalNode specialKeywordResult = null, TerminalKeyword defaultVerb = null, bool accessTerminalObjects = false)
-        {
-
-            TerminalKeyword keyword = ScriptableObject.CreateInstance<TerminalKeyword>();
-            keyword.name = word;
-            keyword.word = word;
-            keyword.isVerb = isVerb;
-            keyword.compatibleNouns = compatibleNouns;
-            keyword.specialKeywordResult = specialKeywordResult;
-            keyword.defaultVerb = defaultVerb;
-            keyword.accessTerminalObjects = accessTerminalObjects;
-            return keyword;
-        }
-
-        public static void AddTerminalKeyword(TerminalKeyword newTerminalKeyword)
-        {
-            Terminal.terminalNodes.allKeywords = Terminal.terminalNodes.allKeywords.AddItem(newTerminalKeyword).ToArray();
-        }
-
-        public static void AddRouteNode(TerminalKeyword terminalKeyword, TerminalNode newTerminalNode)
-        {
-            CompatibleNoun newNoun = new CompatibleNoun();
-            newNoun.noun = terminalKeyword;
-            newNoun.result = newTerminalNode;
-
-            RouteKeyword.compatibleNouns = RouteKeyword.compatibleNouns.AddItem(newNoun).ToArray();
-        }
-
-        public static void AddRouteInfo(TerminalKeyword terminalKeyword, TerminalNode newTerminalNode)
-        {
-            //TODO
-        }
-
+        //This is some abslolute super arbitary wizardry to replicate basegame >moons command
+        //This is also where we add our custom moons into the list
         [HarmonyPatch(typeof(Terminal), "TextPostProcess")]
         [HarmonyPrefix]
         public static void TextPostProcess_PreFix(ref string modifiedDisplayText)
@@ -104,6 +73,7 @@ namespace LethalLevelLoader.Modules
             }
         }
 
+        //This is some abslolute super arbitary wizardry to replicate basegame >moons command
         public static string GetMoonCatalogDisplayListings(List<ExtendedLevel> extendedLevels)
         {
             string returnString = string.Empty;
@@ -137,6 +107,7 @@ namespace LethalLevelLoader.Modules
             return (returnString);
         }
 
+        //Just returns the level weather with a space and ().
         public static string GetMoonConditions(SelectableLevel selectableLevel)
         {
             string returnString = string.Empty;
@@ -151,7 +122,9 @@ namespace LethalLevelLoader.Modules
         public static void CreateLevelTerminalData(ExtendedLevel extendedLevel)
         {
             TerminalKeyword tempRouteKeyword = GetTerminalKeywordFromIndex(26);
+            TerminalKeyword tempInfoKeyword = GetTerminalKeywordFromIndex(6);
             DebugHelper.Log("Temp Route Keyword Is: " + (tempRouteKeyword != null).ToString());
+            DebugHelper.Log("Temp Route Keyword Is: " + (tempInfoKeyword != null).ToString());
 
 
             TerminalKeyword terminalKeyword = ScriptableObject.CreateInstance<TerminalKeyword>();
@@ -174,7 +147,7 @@ namespace LethalLevelLoader.Modules
             terminalNodeRoute.buyRerouteToMoon = -2;
             terminalNodeRoute.displayPlanetInfo = extendedLevel.selectableLevel.levelID;
             terminalNodeRoute.shipUnlockableID = -1;
-            terminalNodeRoute.itemCost = 0;
+            terminalNodeRoute.itemCost = extendedLevel.routePrice;
             terminalNodeRoute.creatureFileID = -1;
             terminalNodeRoute.storyLogFileID = -1;
             terminalNodeRoute.overrideOptions = true;
@@ -189,11 +162,41 @@ namespace LethalLevelLoader.Modules
             terminalNodeRouteConfirm.buyRerouteToMoon = extendedLevel.selectableLevel.levelID;
             terminalNodeRouteConfirm.displayPlanetInfo = 1;
             terminalNodeRouteConfirm.shipUnlockableID = -1;
-            terminalNodeRouteConfirm.itemCost = 0;
+            terminalNodeRouteConfirm.itemCost = extendedLevel.routePrice;
             terminalNodeRouteConfirm.creatureFileID = -1;
             terminalNodeRouteConfirm.storyLogFileID = -1;
             terminalNodeRouteConfirm.overrideOptions = true;
             terminalNodeRouteConfirm.playSyncedClip = -1;
+
+
+            //Building The TerminalNodeInfo String
+
+            string infoString = string.Empty;
+
+            infoString += extendedLevel.selectableLevel.PlanetName + "\n";
+            infoString += "----------------------" + "\n" + "\n";
+            int subStringIndex = extendedLevel.selectableLevel.LevelDescription.IndexOf("CONDITIONS");
+            string modifiedDescription = extendedLevel.selectableLevel.LevelDescription.Substring(subStringIndex);
+            subStringIndex = modifiedDescription.IndexOf("FAUNA");
+            modifiedDescription = modifiedDescription.Insert(subStringIndex, "\n");
+
+            infoString += modifiedDescription;
+
+            //
+
+            terminalNodeRouteConfirm.terminalOptions = new CompatibleNoun[0];
+            terminalNodeInfo.name = extendedLevel.NumberlessPlanetName.ToLower() + "Info";
+            terminalNodeInfo.displayText = infoString;
+            terminalNodeInfo.clearPreviousText = true;
+            terminalNodeInfo.maxCharactersToType = 35;
+            terminalNodeInfo.buyItemIndex = -1;
+            terminalNodeInfo.buyRerouteToMoon = -1;
+            terminalNodeInfo.displayPlanetInfo = -1;
+            terminalNodeInfo.shipUnlockableID = -1;
+            terminalNodeInfo.itemCost = 0;
+            terminalNodeInfo.creatureFileID = -1;
+            terminalNodeInfo.storyLogFileID = 1;
+            terminalNodeInfo.playSyncedClip = -1;
 
             CompatibleNoun routeDeny = new CompatibleNoun();
             CompatibleNoun routeConfirm = new CompatibleNoun();
@@ -211,6 +214,13 @@ namespace LethalLevelLoader.Modules
 
             routeLevel.noun = terminalKeyword;
             routeLevel.result = terminalNodeRoute;
+
+            CompatibleNoun infoLevel = new CompatibleNoun();
+
+            infoLevel.noun = terminalKeyword;
+            infoLevel.result = terminalNodeInfo;
+
+            tempInfoKeyword.compatibleNouns = tempInfoKeyword.compatibleNouns.AddItem(infoLevel).ToArray();
 
             Terminal.terminalNodes.allKeywords = Terminal.terminalNodes.allKeywords.AddItem(terminalKeyword).ToArray();
             tempRouteKeyword.compatibleNouns = tempRouteKeyword.compatibleNouns.AddItem(routeLevel).ToArray();

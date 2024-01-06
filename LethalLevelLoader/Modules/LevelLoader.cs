@@ -29,60 +29,12 @@ public class LevelLoader
     public static TerrainInfo sceneTerrainInfo;
     public static bool isMoonInjected;
 
-    //Jank hotfix to load terrain later so Unity doesn't get overwhelmed.
-    public static int terrainFrameDelay = 0;
-    public static int terrainFrameDelayMax = 1200;
-
-
-    //Tiny temp terrain generated to preload terrain shaders so Unity doesn't get overwhelmed (Credit: Holo)
-    public static GameObject terrainfixer;
-    private static int width = 256;
-    private static int height = 256;
-    private static int depth = 20;
-    private static float scale = 20f;
-    static float[,] GenerateHeights()
-    {
-        float[,] heights = new float[width, height];
-        for (int x = 0; x < width; x++)
-        {
-            for (int y = 0; y < height; y++)
-            {
-                heights[x, y] = CalculateHeight(x, y);
-            }
-        }
-        return heights;
-    }
-    static float CalculateHeight(int x, int y)
-    {
-        float xCoord = (float)x / width * scale;
-        float yCoord = (float)y / height * scale;
-
-        return Mathf.PerlinNoise(xCoord, yCoord);
-    }
-
     [HarmonyPatch(typeof(RoundManager), "Update")]
     [HarmonyPrefix]
     public static void Update_Prefix(RoundManager __instance)
     {
         if (__instance.timeScript == null) //I don't know why but RoundManager loses it's TimeOfDay reference.
             __instance.timeScript = TimeOfDay.Instance;
-    }
-
-    [HarmonyPatch(typeof(RoundManager), "Update")]
-    [HarmonyPostfix]
-    public static void Update_PostFix(RoundManager __instance)
-    {
-        if (sceneTerrainInfo != null)
-        {
-            if (terrainFrameDelay == terrainFrameDelayMax)
-            {
-                EnableTerrain();
-                sceneTerrainInfo = null;
-                terrainFrameDelay = 0;
-            }
-            else
-                terrainFrameDelay++;
-        }
     }
 
     [HarmonyPatch(typeof(StartOfRound), "SceneManager_OnLoadComplete1")]
@@ -95,22 +47,15 @@ public class LevelLoader
 
         DebugHelper.Log("OnLoadComplete. CurrentLevelSceneName: " + RoundManager.Instance.currentLevel.sceneName + " | " + "InjectionSceneName: " + Levels.injectionSceneName);
 
-        if (SceneManager.GetSceneByName("SampleSceneRelay") != null)
-            //PreloadTerrainShader();
         if (SceneManager.GetSceneByName("MainMenu") != null) //IsInGame check to stop us from trying to inject before the intended InitSceneLaunchOptions usage.
             isInGame = true;
-        /*if (SceneManager.GetSceneByName(Levels.injectionSceneName) != null)
-            if (Levels.TryGetExtendedLevel(StartOfRound.Instance.currentLevel, out ExtendedLevel extendedLevel))
-                InjectCustomMoon(SceneManager.GetSceneByName(Levels.injectionSceneName), extendedLevel, false);*/
         if (SceneManager.GetSceneByName(Levels.injectionSceneName) != null)
-            if (Levels.TryGetExtendedLevel(StartOfRound.Instance.currentLevel, out ExtendedLevel extendedLevel))
+            if (Levels.TryGetExtendedLevel(StartOfRound.Instance.currentLevel, out ExtendedLevel extendedLevel, ContentType.Custom))
                 InjectCustomMoon(SceneManager.GetSceneByName(Levels.injectionSceneName), extendedLevel, false);
     }
     public static void InjectCustomMoon(Scene scene, ExtendedLevel extendedLevel, bool disableTerrainOnFirstFrame = false)
     {
-        //if (terrainfixer != null)
-            //terrainfixer.SetActive(false);
-
+        StartGame_Prefix();
         if (isMoonInjected == false)
         {
             foreach (GameObject obj in scene.GetRootGameObjects()) //Disable everything in the Scene were injecting into
@@ -122,14 +67,8 @@ public class LevelLoader
                     if (mainPrefab != null)
                     {
                         SceneManager.MoveGameObjectToScene(mainPrefab, scene); //We move and detatch to replicate vanilla moon scene hierarchy.
-
-                        //SyncLoadedLevel(mainPrefab.scene);
-
-                        //mainPrefab.transform.DetachChildren();
-                        //mainPrefab.SetActive(false);
-
-                        if (disableTerrainOnFirstFrame == true) //Jank hotfix to load terrain later so Unity doesn't get overwhelmed.
-                            DisableTerrain();
+                        if (RoundManager.Instance.IsServer)
+                            SpawnNetworkObjects(mainPrefab.scene);
                     }
                 }
             isMoonInjected = true;
@@ -137,54 +76,71 @@ public class LevelLoader
         }
     }
 
-    public static void DisableTerrain() //Jank hotfix to load terrain later so Unity doesn't get overwhelmed.
+    public static void SpawnNetworkObjects(Scene scene)
     {
-        DebugHelper.Log("Disabling Terrain!");
-        Terrain terrain = GameObject.FindObjectOfType<Terrain>();
-        TerrainCollider terrainCollider = GameObject.FindObjectOfType<TerrainCollider>();
+        int debugCounter = 0;
+        foreach (GameObject rootObject in scene.GetRootGameObjects())
+            foreach (NetworkObject networkObject in rootObject.GetComponentsInChildren<NetworkObject>())
+                if (networkObject.IsSpawned == false)
+                {
+                    networkObject.Spawn();
+                    debugCounter++;
+                }
 
-        if (terrain != null && terrainCollider != null)
+        DebugHelper.Log("Spawned " + debugCounter + " NetworkObject's Found In Injected Moon Prefab");
+    }
+
+    [HarmonyPatch(typeof(StartOfRound), "ShipHasLeft")]
+    [HarmonyPrefix]
+    public static void ShipHasLeft_Prefix(StartOfRound __instance)
+    {
+        DebugHelper.Log("ShipHasLeft Prefix.");
+        DebugHelper.Log("Scene #1 Is: " + SceneManager.GetSceneAt(1).name);
+        DebugHelper.Log("Connected Players Count Is: " + GameNetworkManager.Instance.connectedPlayers);
+    }
+
+    [HarmonyPatch(typeof(StartOfRound), "EndOfGameClientRpc")]
+    [HarmonyPrefix]
+    public static void EndOfGameClientRpc()
+    {
+        DebugHelper.Log("EndOfGameClientRpc Prefix.");
+    }
+
+    public static void StartGame_Prefix()
+    {
+        NetworkManager networkManager = UnityEngine.Object.FindObjectOfType<NetworkManager>();
+
+        int counter = 0;
+        foreach (NetworkPrefab networkPrefab in networkManager.NetworkConfig.Prefabs.m_Prefabs)
         {
-            sceneTerrainInfo = new TerrainInfo();
-            sceneTerrainInfo.terrainCollider = terrainCollider;
-            sceneTerrainInfo.terrainData = terrainCollider.terrainData;
-            sceneTerrainInfo.terrain = terrain;
-
-            terrainCollider.terrainData = null;
-            terrainCollider.enabled = false;
-            terrainCollider.gameObject.SetActive(false);
-
-            terrain.enabled = false;
-            terrain.gameObject.SetActive(false);
+            if (networkPrefab != null)
+            {
+                if (networkPrefab.Prefab != null)
+                {
+                    NetworkObject networkObject = networkPrefab.Prefab.GetComponentInChildren<NetworkObject>();
+                    if (networkObject != null)
+                    {
+                        DebugHelper.Log("Registered NetworkPrefab #" + counter + ": " + networkPrefab.Prefab.name + " (ID: " + networkObject.NetworkObjectId + ")");
+                        counter++;
+                    }
+                    else
+                    {
+                        DebugHelper.Log("Registered NetworkPrefab #" + counter + ": " + networkPrefab.Prefab.name + " (Missing ID!)");
+                        counter++;
+                    }
+                }
+                else
+                {
+                    DebugHelper.Log("Registered NetworkPrefab #" + counter + " Is Missing A Prefab Reference!");
+                    counter++;
+                }
+            }
+            else
+            {
+                DebugHelper.Log("Registered NetworkPrefab Was Null!");
+                counter++;
+            }
         }
     }
 
-    public static void EnableTerrain() //Jank hotfix to load terrain later so Unity doesn't get overwhelmed.
-    {
-        DebugHelper.Log("Enabling Terrain!");
-
-        if (sceneTerrainInfo != null)
-        {
-            sceneTerrainInfo.terrainCollider.terrainData = sceneTerrainInfo.terrainData;
-            sceneTerrainInfo.terrainCollider.enabled = true;
-            sceneTerrainInfo.terrainCollider.gameObject.SetActive(true);
-
-            sceneTerrainInfo.terrain.enabled = true;
-            sceneTerrainInfo.terrain.gameObject.SetActive(true);
-        }
-    }
-
-    public static void PreloadTerrainShader() //Tiny temp terrain generated to preload terrain shaders so Unity doesn't get overwhelmed (Credit: Holo)
-    {
-        DebugHelper.Log("Preloading Terrain Shaders!");
-        terrainfixer = new GameObject();
-        terrainfixer.name = "terrainfixer";
-        terrainfixer.transform.position = new Vector3(0, -500, 0);
-        Terrain terrain = terrainfixer.AddComponent<Terrain>();
-        TerrainData terrainData = new TerrainData();
-        terrainData.heightmapResolution = width + 1;
-        terrainData.size = new Vector3(width, depth, height);
-        terrainData.SetHeights(0, 0, GenerateHeights());
-        terrain.terrainData = terrainData;
-    }
 }

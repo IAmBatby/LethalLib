@@ -32,11 +32,9 @@ namespace LethalLevelLoader.Modules
 
         public static string injectionSceneName = "InitSceneLaunchOptions";
 
-
         public static List<ExtendedLevel> allLevelsList = new List<ExtendedLevel>();
         public static List<ExtendedLevel> vanillaLevelsList = new List<ExtendedLevel>();
         public static List<ExtendedLevel> customLevelsList = new List<ExtendedLevel>();
-
         public static List<SelectableLevel> AllSelectableLevelsList
         {
             get
@@ -48,39 +46,6 @@ namespace LethalLevelLoader.Modules
             }
         }
 
-
-        [HarmonyPatch(typeof(StartOfRound), "OnPlayerConnectedClientRpc")]
-        [HarmonyPrefix]
-        public static void OnPlayerConnectedClientRpc_Prefix()
-        {
-            DebugHelper.Log("OnPlayerConnected Prefix!");
-        }
-
-        [HarmonyPatch(typeof(TimeOfDay), "OnDayChanged")]
-        [HarmonyPrefix]
-        public static void OnDayChanged_Prefix()
-        {
-            DebugHelper.Log("OnDayChanged Prefix!");
-        }
-
-        [HarmonyPatch(typeof(StartOfRound), "SetTimeAndPlanetToSavedSettings")]
-        [HarmonyPrefix]
-        public static void SetTimeAndPlanetToSavedSettings_Prefix()
-        {
-            DebugHelper.Log("SetTimeAndPlanetToSavedSettings Prefix!");
-        }
-
-
-        [HarmonyPatch(typeof(RoundManager), "FinishGeneratingLevel")]
-        [HarmonyPrefix]
-        public static void FinishGeneratingLevel_Prefix()
-        {
-            string debugString = string.Empty;
-
-            debugString += "Start Of FinishGeneratingLevel Prefix." + "\n";
-
-            DebugHelper.Log(debugString);
-        }
 
         [HarmonyPatch(typeof(StartOfRound), "SetPlanetsWeather")]
         [HarmonyPostfix]
@@ -178,82 +143,38 @@ namespace LethalLevelLoader.Modules
             DebugHelper.Log(debugString);
         }
 
-        public static bool patchedLoadSceneName = false;
-
-        [HarmonyPatch(typeof(StartOfRound), "StartGame")]
+        /*[HarmonyPatch(typeof(StartMatchLever), "StartGame")]
         [HarmonyPrefix]
         public static void StartGame_Prefix()
         {
-            DebugHelper.Log("StartGame_Prefix");
+            DebugHelper.Log("StartMatchLeverStartGame_Prefix.");
+            if (TryGetExtendedLevel(StartOfRound.Instance.currentLevel, out ExtendedLevel extendedLevel))
+                if (extendedLevel.levelType == ContentType.Custom)
+                    StartOfRound.Instance.currentLevel.sceneName = injectionSceneName;
         }
 
-
-        [HarmonyPatch(typeof(NetworkSceneManager), "LoadScene")]
-        [HarmonyPrefix]
-        public static void LoadScene_Prefix(ref string sceneName, LoadSceneMode loadSceneMode)
+        [HarmonyPatch(typeof(StartOfRound), "PassTimeToNextDay")]
+        [HarmonyPostfix]
+        public static void PassTimeToNextDay_Prefix()
         {
-            DebugHelper.Log("LoadScene_Prefix");
-            if (StartOfRound.Instance != null)
-                if (patchedLoadSceneName == false)
-                    if (TryGetExtendedLevel(StartOfRound.Instance.currentLevel, out ExtendedLevel extendedLevel))
-                        if (extendedLevel.levelType == ContentType.Custom)
-                        {
-                            sceneName = injectionSceneName;
-                            patchedLoadSceneName = true;
-                        }
+            DebugHelper.Log("PassTimeToNextDay_Prefix.");
+            if (TryGetExtendedLevel(StartOfRound.Instance.currentLevel, out ExtendedLevel extendedLevel))
+                if (extendedLevel.levelType == ContentType.Custom)
+                    StartOfRound.Instance.currentLevel.sceneName = extendedLevel.NumberlessPlanetName;
+        }*/
 
-        }
-
-        [HarmonyPatch(typeof(StartOfRound), "SceneManager_OnLoad")]
-        [HarmonyPrefix]
-        public static void OnLoad_Prefix(ref string sceneName)
-        {
-            DebugHelper.Log("OnLoad_Prefix");
-            if (patchedLoadSceneName == true)
-                sceneName = StartOfRound.Instance.currentLevel.sceneName;
-        }
-
-        [HarmonyPatch(typeof(StartOfRound), "SceneManager_OnLoadComplete1")]
-        [HarmonyPrefix]
-        public static void OnLoadComplete1_Prefix(ref string sceneName)
-        {
-            DebugHelper.Log("OnLoadComplete1_Prefix");
-            if (patchedLoadSceneName == true)
-                sceneName = StartOfRound.Instance.currentLevel.sceneName;
-        }
-
-
-        [HarmonyPatch(typeof(StartOfRound), "SceneManager_OnUnloadComplete")]
-        [HarmonyPrefix]
+        /*[HarmonyPatch(typeof(StartOfRound), "SceneManager_OnUnloadComplete")]
+        [HarmonyPostfix]
         public static void OnUnloadComplete_Prefix(ref string sceneName)
         {
-            DebugHelper.Log("OnUnloadComplete_Prefix");
             if (patchedLoadSceneName == true)
             {
-                sceneName = StartOfRound.Instance.currentLevel.sceneName;
+                DebugHelper.Log("OnUnloadComplete_Prefix.");
+                StartOfRound.Instance.currentLevel.sceneName = oldSceneName;
+                oldSceneName = string.Empty;
                 patchedLoadSceneName = false;
             }
-        }
-
-        [HarmonyPatch(typeof(StartOfRound), "ChangeLevel")]
-        [HarmonyPrefix]
-        public static void ChangeLevel_Prefix(int levelID) //Gotta look into this properlly
-        {
-            DebugHelper.Log("ChangeLevel Prefix!");
-            DebugHelper.Log("CurrentLevelID: " + levelID + " | CurrentLevel: " + StartOfRound.Instance.levels[levelID].PlanetName);
-            //if (levelID >= 9)
-                //levelID = 0;
-            DebugHelper.Log("Patching LevelID!");
-            DebugHelper.Log("CurrentLevelID: " + levelID + " | CurrentLevel: " + StartOfRound.Instance.levels[levelID].PlanetName);
-        }
-
-        [HarmonyPatch(typeof(StartOfRound), "ChangeLevel")]
-        [HarmonyPostfix]
-        public static void ChangeLevel_Postfix() //Gotta look into this properlly
-        {
-            DebugHelper.Log("ChangeLevel Postfix!");
-            DebugHelper.Log("CurrentLevelID: " + StartOfRound.Instance.currentLevelID + " | CurrentLevel: " + StartOfRound.Instance.currentLevel.PlanetName);
-        }
+        }*/
 
         [HarmonyPatch(typeof(RoundManager), "Start")]
         [HarmonyPrefix]
@@ -289,6 +210,11 @@ namespace LethalLevelLoader.Modules
             Terminal terminal = GameObject.FindAnyObjectByType<Terminal>();
             StartOfRound startOfRound = StartOfRound.Instance;
 
+            foreach (ExtendedLevel vanillaLevel in vanillaLevelsList)
+                foreach (CompatibleNoun compatibleRouteNoun in TerminalUtils.RouteKeyword.compatibleNouns)
+                    if (compatibleRouteNoun.noun.name.Contains(vanillaLevel.NumberlessPlanetName))
+                        vanillaLevel.routePrice = compatibleRouteNoun.result.itemCost;
+
             List<SelectableLevel> allSelectableLevels = new List<SelectableLevel>();
 
             foreach (ExtendedLevel extendedLevel in allLevelsList)
@@ -299,8 +225,24 @@ namespace LethalLevelLoader.Modules
             startOfRound.levels = allSelectableLevels.ToArray();
             terminal.moonsCatalogueList = allSelectableLevels.ToArray();
 
+            foreach (ExtendedLevel extendedLevel in allLevelsList)
+                DebugHelper.Log("Route Price Check: " + extendedLevel.NumberlessPlanetName +  " - " + extendedLevel.routePrice);
+
             DebugHelper.Log("StartOfRound Levels List Length Is: " + startOfRound.levels.Length);
             DebugHelper.Log("Terminal Levels List Length Is: " + terminal.moonsCatalogueList.Length);
+        }
+
+
+        [HarmonyPatch(typeof(StartOfRound), "OnPlayerConnectedClientRpc")]
+        [HarmonyPostfix]
+        [HarmonyPriority(Priority.First)]
+        public static void OnPlayerConnectedClientRpc_Postfix()
+        {
+            DebugHelper.Log("OnPlayerConnectedClientRpc_PostFix");
+            if (StartOfRound.Instance.currentLevel != null)
+                DebugHelper.Log(StartOfRound.Instance.currentLevel.PlanetName);
+            else
+                DebugHelper.Log("CurrentLevel Was Null!");
         }
 
         public static bool TryGetExtendedLevel(SelectableLevel selectableLevel, out ExtendedLevel returnExtendedLevel, ContentType levelType = ContentType.Any)
@@ -366,21 +308,18 @@ namespace LethalLevelLoader.Modules
                     vanillaLevel.levelTags.Add("Snow");
                     vanillaLevel.levelTags.Add("Ice");
                     vanillaLevel.levelTags.Add("Tundra");
-                    vanillaLevel.levelCost = 600;
                 }
                 else if (vanillaLevel.NumberlessPlanetName == "Dine")
                 {
                     vanillaLevel.levelTags.Add("Snow");
                     vanillaLevel.levelTags.Add("Ice");
                     vanillaLevel.levelTags.Add("Tundra");
-                    vanillaLevel.levelCost = 650;
                 }
                 else if (vanillaLevel.NumberlessPlanetName == "Titan")
                 {
                     vanillaLevel.levelTags.Add("Snow");
                     vanillaLevel.levelTags.Add("Ice");
                     vanillaLevel.levelTags.Add("Tundra");
-                    vanillaLevel.levelCost = 700;
                 }
             }
         }

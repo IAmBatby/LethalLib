@@ -13,7 +13,6 @@ using System.Reflection;
 using System.Security.Permissions;
 using Unity.Netcode;
 using UnityEngine;
-using static LethalLevelLoader.Modules.Enemies;
 
 [assembly: SecurityPermission(SecurityAction.RequestMinimum, SkipVerification = true)]
 namespace LethalLevelLoader
@@ -42,14 +41,6 @@ namespace LethalLevelLoader
 
             Harmony.PatchAll(typeof(ContentExtractor));
 
-            Enemies.Init();
-
-            Items.Init();
-            Unlockables.Init();
-            MapObjects.Init();
-
-            //Dungeon.Init();
-            Weathers.Init();
             LethalLevelLoader.Modules.NetworkPrefabs.Init();
 
             Harmony.PatchAll(typeof(Dungeon));
@@ -58,6 +49,7 @@ namespace LethalLevelLoader
             Harmony.PatchAll(typeof(LevelLoader));
 
             Harmony.PatchAll(typeof(AssetBundleLoader));
+
             AssetBundleLoader.FindBundles();
         }
 

@@ -12,15 +12,6 @@ public enum ContentType { Vanilla, Custom, Any } //Any & All included for built 
 
 namespace LethalLevelLoader.Modules
 {
-    [System.Serializable]
-    public class TerminalData
-    {
-        TerminalKeyword terminalKeyword;
-        TerminalNode terminalRouteNode;
-        TerminalNode terminalRouteConfirmNode;
-        TerminalNode terminalInfoNode;
-    }
-
     [CreateAssetMenu(menuName = "LethalLib/ExtendedLevel")]
     public class ExtendedLevel : ScriptableObject
     {
@@ -30,46 +21,31 @@ namespace LethalLevelLoader.Modules
         public ContentType levelType;
         public string sourceName = "Lethal Company"; //Levels from AssetBundles will have this as their Assembly Name.
         public string NumberlessPlanetName => GetNumberlessPlanetName(selectableLevel);
-        public int fireExitsAmount = 0;
-        public int levelCost = 0; //Hotfix, this needs to be replaced later.
+        public int routePrice;
         public ContentType allowedDungeonTypes = ContentType.Any;
-        //public List<(DungeonFlow, IntWithRarity)> dungeonFlowsList = new List<(DungeonFlow, IntWithRarity)>();
-        public List<ExtendedDungeonFlowWithRarity> extendedDungeonFlowsList = new List<ExtendedDungeonFlowWithRarity>();
 
         public List<string> levelTags = new List<string>();
 
-        public void Initialize(SelectableLevel newSelectableLevel, ContentType newLevelType, bool generateTerminalAssets, GameObject newLevelPrefab = null, string newSourceName = "Lethal Company")
+        public void Initialize(SelectableLevel newSelectableLevel, ContentType newLevelType, int newRoutePrice, bool generateTerminalAssets, GameObject newLevelPrefab = null, string newSourceName = "Lethal Company")
         {
             DebugHelper.Log("Creating New Extended Level For Moon: " + ExtendedLevel.GetNumberlessPlanetName(newSelectableLevel));
+
+            if (selectableLevel == null)
+                selectableLevel = newSelectableLevel;
+
+            if (sourceName != newSourceName)
+                sourceName = newSourceName;
+
             levelType = newLevelType;
-            selectableLevel = newSelectableLevel;
-            sourceName = newSourceName;
+            routePrice = newRoutePrice;
 
-
-            if (newLevelType == ContentType.Custom)
-            {
-                levelPrefab = newLevelPrefab;
-                levelTags.Add("Custom");
-                //This isn't used in LethalLevelLoader because we prefix patch the NetworkSceneManager with the right sceneName if the level is custom
-                //We Set this to a Unique name because at one point (find where later) the game compares scene string names and we should ensure they are all Unique.
-                selectableLevel.sceneName = NumberlessPlanetName;
-                //selectableLevel.levelID = 9;
-            }
-
-            /*List<IntWithRarity> tempFlowTypes = new List<IntWithRarity>(selectableLevel.dungeonFlowTypes);
-
-            foreach (IntWithRarity dungeonFlow in selectableLevel.dungeonFlowTypes)
-                if (dungeonFlow == null)
-                    tempFlowTypes.Remove(dungeonFlow);*/
-
-            selectableLevel.levelID = Levels.allLevelsList.Count;
-
-            //selectableLevel.dungeonFlowTypes = tempFlowTypes.ToArray();
         }
 
         public static void ProcessCustomLevel(ExtendedLevel extendedLevel)
         {
-            extendedLevel.fireExitsAmount = extendedLevel.levelPrefab.GetComponentsInChildren<EntranceTeleport>().Length - 1; //-1 Becuase this includes Main Entrance.
+            extendedLevel.levelTags.Add("Custom");
+            extendedLevel.selectableLevel.levelID = Levels.allLevelsList.Count;
+            extendedLevel.selectableLevel.sceneName = Levels.injectionSceneName;
             TerminalUtils.CreateLevelTerminalData(extendedLevel);
         }
 

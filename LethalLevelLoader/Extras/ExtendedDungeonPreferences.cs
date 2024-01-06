@@ -18,6 +18,8 @@ namespace LethalLevelLoader.Extras
         public bool enableInjectionViaLevelDungeonMultiplierSetting;
         public int sizeMultiplierMin;
         public int sizeMultiplierMax;
+        [Range(0, 1)]
+        public float sizeMultiplierClampPercentage;
 
         public List<Vector2WithRarity> dynamicRoutePricesList = new List<Vector2WithRarity>();
 
@@ -37,12 +39,8 @@ namespace LethalLevelLoader.Extras
     [System.Serializable]
     public class StringWithRarity
     {
-        public string name;
-        [Range(0, 1)]
-        public float spawnChance;
-
-        [HideInInspector]
-        public int rarity;
+        [Range(0, 1)] public string name;
+        [HideInInspector] public int rarity;
 
         public StringWithRarity(string newName, float newSpawnChance)
         {

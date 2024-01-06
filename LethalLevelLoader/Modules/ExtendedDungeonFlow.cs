@@ -38,11 +38,12 @@ namespace LethalLevelLoader.Modules
                 extendedDungeonPreferences = ScriptableObject.CreateInstance<ExtendedDungeonPreferences>();
 
             if (dungeonType == ContentType.Custom)
-                extendedDungeonPreferences.levelTagsList.Add(new StringWithRarity("Custom", 300));
+                extendedDungeonPreferences.levelTagsList.Add(new StringWithRarity("Custom", 50));
             else
-                extendedDungeonPreferences.levelTagsList.Add(new StringWithRarity("Vanilla", 300));
-            extendedDungeonPreferences.levelCostMin = 700;
+                extendedDungeonPreferences.levelTagsList.Add(new StringWithRarity("Vanilla", 50));
 
+            extendedDungeonPreferences.sizeMultiplierMax = 2;
+            extendedDungeonPreferences.sizeMultiplierClampPercentage = 0.5f;
         }
     }
 

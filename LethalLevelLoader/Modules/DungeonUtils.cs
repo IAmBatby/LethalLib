@@ -122,7 +122,7 @@ namespace LethalLevelLoader.Modules
             foreach (StringWithRarity stringWithRarity in extendedDungeonFlow.extendedDungeonPreferences.manualLevelSourceReferenceList)
                 if (stringWithRarity.name.Contains(extendedLevel.sourceName))
                 {
-                    rarity = (int)stringWithRarity.spawnChance;
+                    rarity = (int)stringWithRarity.rarity;
                     return (true);
                 }
 
@@ -139,7 +139,7 @@ namespace LethalLevelLoader.Modules
             foreach (StringWithRarity stringWithRarity in extendedDungeonFlow.extendedDungeonPreferences.manualLevelNameReferenceList)
                 if (stringWithRarity.name.Contains(extendedLevel.NumberlessPlanetName))
                 {
-                    rarity = (int)stringWithRarity.spawnChance;
+                    rarity = (int)stringWithRarity.rarity;
                     return (true);
                 }
 
@@ -152,7 +152,7 @@ namespace LethalLevelLoader.Modules
 
             foreach (Vector2WithRarity vectorWithRarity in extendedDungeonFlow.extendedDungeonPreferences.dynamicRoutePricesList)
             {
-                if ((extendedLevel.levelCost >= vectorWithRarity.min) && (extendedLevel.levelCost <= vectorWithRarity.max))
+                if ((extendedLevel.routePrice >= vectorWithRarity.min) && (extendedLevel.routePrice <= vectorWithRarity.max))
                 {
                     rarity = vectorWithRarity.rarity;
                     return (true);
@@ -176,7 +176,7 @@ namespace LethalLevelLoader.Modules
                 foreach (StringWithRarity stringWithRarity in extendedDungeonFlow.extendedDungeonPreferences.levelTagsList)
                     if (stringWithRarity.name.Contains(levelTag))
                     {
-                        rarity = (int)stringWithRarity.spawnChance;
+                        rarity = (int)stringWithRarity.rarity;
                         return (true);
                     }
 

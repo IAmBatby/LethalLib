@@ -196,7 +196,7 @@ namespace LethalLevelLoader.Extras
             Log(debugString);
         }
 
-        [HarmonyPatch(typeof(PlayerControllerB), "Awake")]
+        /*[HarmonyPatch(typeof(PlayerControllerB), "Awake")]
         [HarmonyPostfix]
         public static void SetPlayerNames(PlayerControllerB __instance)
         {
@@ -210,7 +210,7 @@ namespace LethalLevelLoader.Extras
                 Log("SetPlayerNames: This Client Is Not The Host!");
                 __instance.playerUsername = "Client";
             }
-        }
+        }*/
     }
 
 }
