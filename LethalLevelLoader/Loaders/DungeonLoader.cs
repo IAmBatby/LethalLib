@@ -1,21 +1,13 @@
 ﻿using DunGen;
-using DunGen.Graph;
 using HarmonyLib;
-using LethalLevelLoader.Extras;
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
-using System.Text;
-using System.Xml.Linq;
-using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using static DunGen.Graph.DungeonFlow;
 using Random = System.Random;
-//using static LethalLib.Modules.Items;
 
-namespace LethalLevelLoader.Modules
+namespace LethalLevelLoader
 {
     [System.Serializable]
     public class ExtendedDungeonFlowWithRarity
@@ -24,29 +16,11 @@ namespace LethalLevelLoader.Modules
         public int rarity;
 
         public ExtendedDungeonFlowWithRarity(ExtendedDungeonFlow newExtendedDungeonFlow, int newRarity)
-        {
-            extendedDungeonFlow = newExtendedDungeonFlow;
-            rarity = newRarity;
-        }
+        { extendedDungeonFlow = newExtendedDungeonFlow; rarity = newRarity; }
     }
     
-    public class Dungeon
+    public class DungeonLoader
     {
-        public static List<ExtendedDungeonFlow> allExtendedDungeonsList = new List<ExtendedDungeonFlow>();
-        public static List<ExtendedDungeonFlow> vanillaDungeonFlowsList = new List<ExtendedDungeonFlow>();
-        public static List<ExtendedDungeonFlow> customDungeonFlowsList = new List<ExtendedDungeonFlow>();
-
-        public static void AddExtendedDungeonFlow(ExtendedDungeonFlow extendedDungeonFlow)
-        {
-            DebugHelper.Log("Adding Dungeon Flow: " + extendedDungeonFlow.dungeonFlow.name);
-            if (extendedDungeonFlow.dungeonType == ContentType.Custom)
-                customDungeonFlowsList.Add(extendedDungeonFlow);
-            else
-                vanillaDungeonFlowsList.Add(extendedDungeonFlow);
-
-            allExtendedDungeonsList.Add(extendedDungeonFlow);
-        }
-
         [HarmonyPatch(typeof(DungeonGenerator), "Generate")]
         [HarmonyPrefix]
         public static void Generate_Prefix(DungeonGenerator __instance)
@@ -54,12 +28,11 @@ namespace LethalLevelLoader.Modules
             DebugHelper.Log("Started To Prefix Patch DungeonGenerator Generate!");
             Scene scene = RoundManager.Instance.dungeonGenerator.gameObject.scene;
 
-            if (Levels.TryGetExtendedLevel(RoundManager.Instance.currentLevel, out ExtendedLevel extendedLevel))
+            if (SelectableLevel_Patch.TryGetExtendedLevel(RoundManager.Instance.currentLevel, out ExtendedLevel extendedLevel))
             {
                 SetDungeonFlow(__instance, extendedLevel);
                 PatchDungeonSize(__instance, extendedLevel);
                 PatchFireEscapes(__instance, extendedLevel, scene);
-                //LevelLoader.SyncLoadedLevel(scene);
             }
         }
 
@@ -75,7 +48,7 @@ namespace LethalLevelLoader.Modules
             List<int> randomWeightsList = new List<int>();
             string debugString = "Current Level + (" + extendedLevel.NumberlessPlanetName + ") Weights List: " + "\n" + "\n";
 
-            List<ExtendedDungeonFlowWithRarity> availableExtendedFlowsList = DungeonUtils.GetValidExtendedDungeonFlows(extendedLevel).ToList();
+            List<ExtendedDungeonFlowWithRarity> availableExtendedFlowsList = DungeonFlow_Patch.GetValidExtendedDungeonFlows(extendedLevel).ToList();
 
             foreach (ExtendedDungeonFlowWithRarity extendedDungeon in availableExtendedFlowsList)
                 randomWeightsList.Add(extendedDungeon.rarity);
@@ -98,7 +71,7 @@ namespace LethalLevelLoader.Modules
 
         public static void PatchDungeonSize(DungeonGenerator dungeonGenerator, ExtendedLevel extendedLevel)
         {
-            if (TryGetExtendedDungeonFlow(dungeonGenerator.DungeonFlow, out ExtendedDungeonFlow extendedDungeonFlow))
+            if (DungeonFlow_Patch.TryGetExtendedDungeonFlow(dungeonGenerator.DungeonFlow, out ExtendedDungeonFlow extendedDungeonFlow))
                 if (dungeonGenerator.LengthMultiplier > extendedDungeonFlow.extendedDungeonPreferences.sizeMultiplierMax)
                 {
                     float newDungeonSize = Mathf.Lerp(extendedDungeonFlow.extendedDungeonPreferences.sizeMultiplierMax, extendedLevel.selectableLevel.factorySizeMultiplier, extendedDungeonFlow.extendedDungeonPreferences.sizeMultiplierClampPercentage);
@@ -113,32 +86,36 @@ namespace LethalLevelLoader.Modules
 
             List<EntranceTeleport> entranceTeleports = new List<EntranceTeleport>();
             int fireEscapesAmount = 0;
+            bool mainEntranceFound = false;
 
             foreach (GameObject rootObject in scene.GetRootGameObjects())
                 foreach (EntranceTeleport entranceTeleport in rootObject.GetComponentsInChildren<EntranceTeleport>())
                 {
                     fireEscapesAmount++;
-                    entranceTeleport.dungeonFlowId = 5;
+                    entranceTeleport.dungeonFlowId = -1;
                     entranceTeleport.firstTimeAudio = RoundManager.Instance.firstTimeDungeonAudios[0];
+                    DebugHelper.Log("EntranceTeleporter Is: " + (entranceTeleport.IsSpawned == true));
+                    if (entranceTeleport.entranceId == 0)
+                        DebugHelper.Log("Main Entrance Found!");
+                    else
+                        entranceTeleport.entranceId = fireEscapesAmount;
                 }
 
-            fireEscapesAmount = 1; //To Remove Main Entrance From The Count.
+            fireEscapesAmount -= 1; //To Remove Main Entrance From The Count.
 
             if (fireEscapesAmount != 0)
-                debugString += "EntranceTeleport's Found, " + extendedLevel.NumberlessPlanetName + " Contains " + fireEscapesAmount + " Entrances! ( " + fireEscapesAmount + " Fire Escapes) " + "\n";
+                debugString += "EntranceTeleport's Found, " + extendedLevel.NumberlessPlanetName + " Contains " + (fireEscapesAmount + 1) + " Entrances! ( " + fireEscapesAmount + " Fire Escapes) " + "\n";
 
-            bool foundProp = false;
             Vector2 oldCount = Vector2.zero;
             foreach (GlobalPropSettings globalPropSettings in dungeonGenerator.DungeonFlow.GlobalProps)
             {
                 if (globalPropSettings.ID == 1231)
                 {
                     globalPropSettings.Count = new IntRange(fireEscapesAmount, fireEscapesAmount);
-                    foundProp = true;
                     oldCount = new Vector2(globalPropSettings.Count.Min, globalPropSettings.Count.Max);
                 }
             }
-            if (foundProp == true)
+            if (oldCount != Vector2.zero)
                 debugString += "Found Fire Escape GlobalProp: (ID: 1231), Modifying Spawnrate Count From (" + oldCount.x + "," + oldCount.y + ") To (" + fireEscapesAmount + "," + fireEscapesAmount + ")" + "\n";
             else
                 debugString += "Fire Escape GlobalProp Could Not Be Found! Fire Escapes Will Not Be Patched!" + "\n";
@@ -146,31 +123,5 @@ namespace LethalLevelLoader.Modules
 
             DebugHelper.Log(debugString + "\n");
         }
-
-        public static bool TryGetExtendedDungeonFlow(DungeonFlow dungeonFlow, out ExtendedDungeonFlow returnExtendedDungeonFlow, ContentType levelType = ContentType.Any)
-        {
-            returnExtendedDungeonFlow = null;
-            List<ExtendedDungeonFlow> extendedDungeonFlowsList = new List<ExtendedDungeonFlow>();
-
-            switch (levelType)
-            {
-                case ContentType.Vanilla:
-                    extendedDungeonFlowsList = vanillaDungeonFlowsList;
-                    break;
-                case ContentType.Custom:
-                    extendedDungeonFlowsList = customDungeonFlowsList;
-                    break;
-                case ContentType.Any:
-                    extendedDungeonFlowsList = allExtendedDungeonsList;
-                    break;
-            }
-
-            foreach (ExtendedDungeonFlow extendedDungeonFlow in extendedDungeonFlowsList)
-                if (extendedDungeonFlow.dungeonFlow == dungeonFlow)
-                    returnExtendedDungeonFlow = extendedDungeonFlow;
-
-            return (returnExtendedDungeonFlow != null);
-        }
-
     }
 }

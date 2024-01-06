@@ -1,15 +1,11 @@
 ﻿using HarmonyLib;
-using LethalLevelLoader.Extras;
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using UnityEngine;
-using static LethalLevelLoader.Modules.Levels;
 
-namespace LethalLevelLoader.Modules
+namespace LethalLevelLoader
 {
-    public class TerminalUtils
+    public class Terminal_Patch
     {
         private static Terminal _terminal;
         public static Terminal Terminal
@@ -60,7 +56,7 @@ namespace LethalLevelLoader.Modules
             {
                 modifiedDisplayText = "Welcome to the exomoons catalogue.\r\nTo route the autopilot to a moon, use the word ROUTE.\r\nTo learn about any moon, use the word INFO.\r\n____________________________\r\n\r\n* The Company building   //   Buying at [companyBuyingPercent].\r\n\r\n";
 
-                List<ExtendedLevel> tweakedVanillaLevelsList = new List<ExtendedLevel>(vanillaLevelsList);
+                List<ExtendedLevel> tweakedVanillaLevelsList = new List<ExtendedLevel>(SelectableLevel_Patch.vanillaLevelsList);
 
                 tweakedVanillaLevelsList.RemoveAt(3);
                 tweakedVanillaLevelsList.Insert(3, tweakedVanillaLevelsList[6]);
@@ -68,7 +64,7 @@ namespace LethalLevelLoader.Modules
                 tweakedVanillaLevelsList.Insert(5, null);
 
                 modifiedDisplayText += GetMoonCatalogDisplayListings(tweakedVanillaLevelsList);
-                modifiedDisplayText += GetMoonCatalogDisplayListings(customLevelsList);
+                modifiedDisplayText += GetMoonCatalogDisplayListings(SelectableLevel_Patch.customLevelsList);
                 modifiedDisplayText += "\r\n";
             }
         }

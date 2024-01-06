@@ -1,9 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
 using UnityEngine;
 
-namespace LethalLevelLoader.Extras
+namespace LethalLevelLoader
 {
     [CreateAssetMenu(menuName = "LethalLib/DungeonPreferences")]
     public class ExtendedDungeonPreferences : ScriptableObject
@@ -16,10 +15,10 @@ namespace LethalLevelLoader.Extras
         [Space(20)]
 
         public bool enableInjectionViaLevelDungeonMultiplierSetting;
-        public int sizeMultiplierMin;
-        public int sizeMultiplierMax;
+        public int sizeMultiplierMin = 1;
+        public int sizeMultiplierMax = 1;
         [Range(0, 1)]
-        public float sizeMultiplierClampPercentage;
+        public float sizeMultiplierClampPercentage = 0;
 
         public List<Vector2WithRarity> dynamicRoutePricesList = new List<Vector2WithRarity>();
 

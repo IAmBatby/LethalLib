@@ -1,11 +1,7 @@
 ﻿using DunGen.Graph;
-using LethalLevelLoader.Extras;
-using System;
-using System.Collections.Generic;
-using System.Text;
 using UnityEngine;
 
-namespace LethalLevelLoader.Modules
+namespace LethalLevelLoader
 {
     [CreateAssetMenu(menuName = "LethalLib/ExtendedDungeonFlow")]
     public class ExtendedDungeonFlow : ScriptableObject
@@ -32,24 +28,10 @@ namespace LethalLevelLoader.Modules
             if (name == string.Empty)
                 name = dungeonFlow.name;
 
-            //dungeonID = RoundManager.Instance.dungeonFlowTypes.Length + Dungeon.allExtendedDungeonsList.Count;
+            //dungeonID = RoundManager.Instance.dungeonFlowTypes.Length + DungeonFlow_Patch.allExtendedDungeonsList.Count;
 
             if (extendedDungeonPreferences == null)
                 extendedDungeonPreferences = ScriptableObject.CreateInstance<ExtendedDungeonPreferences>();
-
-            if (dungeonType == ContentType.Custom)
-                extendedDungeonPreferences.levelTagsList.Add(new StringWithRarity("Custom", 50));
-            else
-                extendedDungeonPreferences.levelTagsList.Add(new StringWithRarity("Vanilla", 50));
-
-            extendedDungeonPreferences.sizeMultiplierMax = 2;
-            extendedDungeonPreferences.sizeMultiplierClampPercentage = 0.5f;
         }
     }
-
-    /*[Serializable]
-    public class ExtendedDungeonPreferences
-    {
-        public List<string> targetedLevelTags = new List<string>();
-    }*/
 }

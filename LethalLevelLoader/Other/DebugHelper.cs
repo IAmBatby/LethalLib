@@ -1,14 +1,11 @@
 ﻿using DunGen.Graph;
-using GameNetcodeStuff;
 using HarmonyLib;
-using LethalLevelLoader.Modules;
-using System;
 using System.Collections.Generic;
-using System.Text;
 using UnityEngine;
 using UnityEngine.Audio;
+using Random = System.Random;
 
-namespace LethalLevelLoader.Extras
+namespace LethalLevelLoader
 {
     public static class DebugHelper
     {
@@ -80,7 +77,7 @@ namespace LethalLevelLoader.Extras
         {
             string logString = "All Levels List: " + "\n" + "\n";
 
-            foreach (ExtendedLevel extendedLevel in Levels.allLevelsList)
+            foreach (ExtendedLevel extendedLevel in SelectableLevel_Patch.allLevelsList)
                 logString += extendedLevel.selectableLevel.PlanetName + " (" + extendedLevel.selectableLevel.levelID + ") " + "\n";
 
             Log(logString + "\n");
@@ -90,7 +87,7 @@ namespace LethalLevelLoader.Extras
         {
             string logString = "Vanilla Levels List: " + "\n" + "\n";
 
-            foreach (ExtendedLevel extendedLevel in Levels.vanillaLevelsList)
+            foreach (ExtendedLevel extendedLevel in SelectableLevel_Patch.vanillaLevelsList)
                 logString += extendedLevel.selectableLevel.PlanetName + " (" + extendedLevel.selectableLevel.levelID + ") " + "\n";
 
             Log(logString + "\n");
@@ -100,7 +97,7 @@ namespace LethalLevelLoader.Extras
         {
             string logString = "Custom Levels List: " + "\n" + "\n";
 
-            foreach (ExtendedLevel extendedLevel in Levels.customLevelsList)
+            foreach (ExtendedLevel extendedLevel in SelectableLevel_Patch.customLevelsList)
                 logString += extendedLevel.selectableLevel.PlanetName + " (" + extendedLevel.selectableLevel.levelID + ") " + "\n";
 
             Log(logString + "\n");
@@ -176,41 +173,96 @@ namespace LethalLevelLoader.Extras
         {
             string debugString = "All ExtendedDungeons: " + "\n" + "\n";
 
-            foreach (ExtendedDungeonFlow dungeonFlow in Dungeon.allExtendedDungeonsList)
+            foreach (ExtendedDungeonFlow dungeonFlow in DungeonFlow_Patch.allExtendedDungeonsList)
                 debugString += dungeonFlow.dungeonFlow.name;
 
             Log(debugString);
 
             debugString = "Vanilla ExtendedDungeons: " + "\n" + "\n";
 
-            foreach (ExtendedDungeonFlow dungeonFlow in Dungeon.vanillaDungeonFlowsList)
+            foreach (ExtendedDungeonFlow dungeonFlow in DungeonFlow_Patch.vanillaDungeonFlowsList)
                 debugString += dungeonFlow.dungeonFlow.name;
 
             Log(debugString);
 
             debugString = "Custom ExtendedDungeons: " + "\n" + "\n";
 
-            foreach (ExtendedDungeonFlow dungeonFlow in Dungeon.customDungeonFlowsList)
+            foreach (ExtendedDungeonFlow dungeonFlow in DungeonFlow_Patch.customDungeonFlowsList)
                 debugString += dungeonFlow.dungeonFlow.name;
 
             Log(debugString);
         }
 
-        /*[HarmonyPatch(typeof(PlayerControllerB), "Awake")]
-        [HarmonyPostfix]
-        public static void SetPlayerNames(PlayerControllerB __instance)
+        public static void DebugPlanetWeatherRandomisation(int players, List<SelectableLevel> selectableLevelsList)
         {
-            if (__instance.IsServer)
+            StartOfRound startOfRound = StartOfRound.Instance;
+
+            List<SelectableLevel> selectableLevels = new List<SelectableLevel>(selectableLevelsList);
+
+            //Recreate Weather Random Stuff
+
+            foreach (SelectableLevel selectableLevel in selectableLevels)
+                selectableLevel.currentWeather = LevelWeatherType.None;
+
+            Random weatherRandom = new Random(startOfRound.randomMapSeed + 31);
+
+            float playerRandomFloat = 1f;
+
+            if (players + 1 > 1 && startOfRound.daysPlayersSurvivedInARow > 2 && startOfRound.daysPlayersSurvivedInARow % 3 == 0)
+                playerRandomFloat = (float)weatherRandom.Next(15, 25) / 10f;
+
+            int randomPlanetWeatherCurve = Mathf.Clamp((int)(Mathf.Clamp(startOfRound.planetsWeatherRandomCurve.Evaluate((float)weatherRandom.NextDouble()) * playerRandomFloat, 0f, 1f) * (float)selectableLevels.Count), 0, selectableLevels.Count);
+
+            //Debug Logging
+
+            string debugString = string.Empty;
+            debugString += "Start Of SetPlanetWeather() Prefix." + "\n";
+            debugString += "Planet Weather Being Set! Details Below;" + "\n" + "\n";
+            debugString += "RandomMapSeed Is: " + startOfRound.randomMapSeed + "\n";
+            debugString += "Planet Random Is: " + weatherRandom + "\n";
+            debugString += "Player Random Is: " + playerRandomFloat + "\n";
+            debugString += "Result From PlanetWeatherRandomCurve Is: " + randomPlanetWeatherCurve + "\n";
+            debugString += "All SelectableLevels In StartOfRound: " + "\n" + "\n";
+
+
+            foreach (SelectableLevel selectableLevel in selectableLevels)
             {
-                Log("SetPlayerNames: This Client Is The Host!");
-                __instance.playerUsername = "Host";
+                debugString += selectableLevel.PlanetName + " | " + selectableLevel.currentWeather + " | " + selectableLevel.overrideWeather + "\n";
+                foreach (RandomWeatherWithVariables randomWeather in selectableLevel.randomWeathers)
+                    debugString += randomWeather.weatherType.ToString() + " | " + randomWeather.weatherVariable + " | " + randomWeather.weatherVariable2 + "\n";
+
+                debugString += "\n";
             }
-            else
+
+            debugString += "SelectableLevels Chosen Using Random Variables Should Be: " + "\n" + "\n";
+
+            for (int j = 0; j < randomPlanetWeatherCurve; j++)
             {
-                Log("SetPlayerNames: This Client Is Not The Host!");
-                __instance.playerUsername = "Client";
+                SelectableLevel selectableLevel = selectableLevels[weatherRandom.Next(0, selectableLevels.Count)];
+                debugString += "SelectableLevel Chosen! Planet Name Is: " + selectableLevel.PlanetName;
+                if (selectableLevel.randomWeathers != null && selectableLevel.randomWeathers.Length != 0)
+                {
+                    int randomSelection = weatherRandom.Next(0, selectableLevel.randomWeathers.Length);
+                    debugString += " --- Selected For Weather Change! Setting WeatherType From: " + selectableLevel.currentWeather + " To: " + selectableLevel.randomWeathers[randomSelection].weatherType + "\n";
+                    debugString += "          Random Selection Results Were: " + randomSelection + " (Range: 0 - " + selectableLevel.randomWeathers.Length + ") Level RandomWeathers Choices Were: " + "\n" + "          ";
+
+                    int index = 0;
+                    foreach (RandomWeatherWithVariables weatherType in selectableLevel.randomWeathers)
+                    {
+                        debugString += index + " . - " + weatherType.weatherType + ", ";
+                        index++;
+                    }
+                    debugString += "\n" + "\n";
+                }
+                else
+                    debugString += "\n";
+                selectableLevels.Remove(selectableLevel);
             }
-        }*/
+
+            debugString += "End Of SetPlanetWeather() Prefix." + "\n" + "\n";
+
+            DebugHelper.Log(debugString);
+        }
     }
 
 }

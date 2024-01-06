@@ -1,12 +1,11 @@
 ﻿using HarmonyLib;
-using LethalLevelLoader.Extras;
 using System;
 using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
 using UnityEngine.Audio;
 
-namespace LethalLevelLoader.Modules
+namespace LethalLevelLoader
 {
     public class ContentExtractor
     {

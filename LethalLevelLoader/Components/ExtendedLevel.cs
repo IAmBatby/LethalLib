@@ -1,16 +1,10 @@
-﻿using DunGen.Graph;
-using HarmonyLib;
-using LethalLevelLoader;
-using LethalLevelLoader.Extras;
-using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using UnityEngine;
 
 public enum ContentType { Vanilla, Custom, Any } //Any & All included for built in checks.
 
-namespace LethalLevelLoader.Modules
+namespace LethalLevelLoader
 {
     [CreateAssetMenu(menuName = "LethalLib/ExtendedLevel")]
     public class ExtendedLevel : ScriptableObject
@@ -21,12 +15,11 @@ namespace LethalLevelLoader.Modules
         public ContentType levelType;
         public string sourceName = "Lethal Company"; //Levels from AssetBundles will have this as their Assembly Name.
         public string NumberlessPlanetName => GetNumberlessPlanetName(selectableLevel);
-        public int routePrice;
+        public int routePrice = 0;
         public ContentType allowedDungeonTypes = ContentType.Any;
-
         public List<string> levelTags = new List<string>();
 
-        public void Initialize(SelectableLevel newSelectableLevel, ContentType newLevelType, int newRoutePrice, bool generateTerminalAssets, GameObject newLevelPrefab = null, string newSourceName = "Lethal Company")
+        public void Initialize(ContentType newLevelType, SelectableLevel newSelectableLevel = null, int newRoutePrice = 0, bool generateTerminalAssets = false, GameObject newLevelPrefab = null, string newSourceName = "Lethal Company")
         {
             DebugHelper.Log("Creating New Extended Level For Moon: " + ExtendedLevel.GetNumberlessPlanetName(newSelectableLevel));
 
@@ -36,17 +29,21 @@ namespace LethalLevelLoader.Modules
             if (sourceName != newSourceName)
                 sourceName = newSourceName;
 
+
             levelType = newLevelType;
-            routePrice = newRoutePrice;
 
-        }
+            if (routePrice == 0)
+                routePrice = newRoutePrice;
 
-        public static void ProcessCustomLevel(ExtendedLevel extendedLevel)
-        {
-            extendedLevel.levelTags.Add("Custom");
-            extendedLevel.selectableLevel.levelID = Levels.allLevelsList.Count;
-            extendedLevel.selectableLevel.sceneName = Levels.injectionSceneName;
-            TerminalUtils.CreateLevelTerminalData(extendedLevel);
+            if (levelType == ContentType.Custom)
+            {
+                levelTags.Add("Custom");
+                selectableLevel.levelID = SelectableLevel_Patch.allLevelsList.Count;
+                selectableLevel.sceneName = SelectableLevel_Patch.injectionSceneName;
+            }
+
+            if (generateTerminalAssets == true) //Needs to be after levelID setting above.
+                Terminal_Patch.CreateLevelTerminalData(this);
         }
 
         public static string GetNumberlessPlanetName(SelectableLevel selectableLevel)

@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace LethalLevelLoader.Extras
+namespace LethalLevelLoader
 {
     class DebugOrderOfExecution
     {
